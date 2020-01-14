@@ -18,6 +18,8 @@ replace golang.org/x/crypto => github.com/golang/crypto v0.0.0-20191206172530-e9
 
 replace golang.org/x/text => github.com/golang/text v0.3.2
 
+replace golang.org/x/lint => https://github.com/golang/lint
+
 require (
 	github.com/gin-gonic/gin v1.5.0
 	github.com/go-sql-driver/mysql v1.4.1
