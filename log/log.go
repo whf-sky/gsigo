@@ -15,6 +15,7 @@ type log struct {
 	logrus *logrus.Logger
 }
 
+//Newlog new log
 func Newlog(formatter string, network string, raddr string, priority string, tag string, debug bool) *logrus.Logger {
 	log := &log{}
 	log.newLogrus(formatter, debug)
@@ -22,6 +23,8 @@ func Newlog(formatter string, network string, raddr string, priority string, tag
 	return log.logrus
 }
 
+
+//newLogrus new Logrus
 func (l *log) newLogrus(Formatter string, Debug bool)  {
 	l.logrus = logrus.New()
 	switch Formatter {
@@ -35,6 +38,7 @@ func (l *log) newLogrus(Formatter string, Debug bool)  {
 	}
 }
 
+//hook
 func (l *log) hook(network string, raddr string, priority string, tag string)  {
 	if runtime.GOOS == "linux" {
 		l.syslogHook(network, raddr, priority, tag)
@@ -43,11 +47,13 @@ func (l *log) hook(network string, raddr string, priority string, tag string)  {
 	}
 }
 
+//developHook develop hook
 func (l *log) developHook()  {
 	hook := hooks.DevelopNew()
 	l.logrus.Hooks.Add(hook)
 }
 
+//syslogHook is syslog hook
 func (l *log) syslogHook(network string, raddr string, priorityStr string, tag string)  {
 	l.logrus.Out = ioutil.Discard
 	var priority syslog.Priority
@@ -79,6 +85,7 @@ func (l *log) syslogHook(network string, raddr string, priorityStr string, tag s
 	}
 }
 
+//GenerateLogid is generate log id
 func GenerateLogid() string {
 	unixNano := time.Now().UnixNano()
 	rand.Seed(unixNano)

@@ -3,47 +3,57 @@ package gsigo
 import (
 	"encoding/json"
 	"fmt"
+	"runtime"
 )
 
+//ThrowError throw error
 func ThrowError(message string, code ...int) error {
 	errorCode := 0
 	if len(code) > 0 {
 		errorCode = code[0]
 	}
-	return &GsigoError{
+	_, file, line, _ := runtime.Caller(1)
+	return &Error{
 		Code: errorCode,
 		Message: message,
+		File:file,
+		Line:line,
 	}
 }
 
-type GsigoError struct {
+type Error struct {
 	Code int
 	Message string
-	file string
-	line int
+	File string
+	Line int
 }
 
-func (ge GsigoError) Error() string {
-	return fmt.Sprintf("%v:%v:%v: %v", ge.file, ge.line, ge.Code, ge.Message )
+func (ge Error) Error() string {
+	return fmt.Sprintf("%v:%v:%v: %v", ge.File, ge.Line, ge.Code, ge.Message )
 }
 
-func (ge *GsigoError) getMessage () string {
+//getMessage get error message
+func (ge *Error) getMessage () string {
 	return ge.Message
 }
 
-func (ge *GsigoError) getCode () int {
+//getCode get error code
+func (ge *Error) getCode () int {
 	return ge.Code
 }
 
-func (ge *GsigoError) getLine () int {
-	return ge.line
+//getLine get error file line
+func (ge *Error) getLine () int {
+	return ge.Line
 }
 
-func (ge *GsigoError) getFile () string {
-	return ge.file
+//getFile get error file
+func (ge *Error) getFile () string {
+	return ge.File
 }
 
-func (ge *GsigoError) toJson () string {
+//toJson Error struct to json
+func (ge *Error) toJson () string {
 	jsonByte,_ := json.Marshal(ge)
 	return string(string(jsonByte))
 }

@@ -25,7 +25,7 @@ func using(gname ...string) map[string]*group {
 	return tGroups
 }
 
-//database group
+//redis group
 type group struct {
 	Config 	GroupYml
 	Pool 	*redis.Pool
@@ -33,7 +33,7 @@ type group struct {
 	Slave 	[]*redis.Pool
 }
 
-//get gorm group
+//get redis group
 func (g *group) get(name string) *group {
 	//get databases group
 	var ok bool
@@ -58,7 +58,7 @@ func (g *group) get(name string) *group {
 	return g
 }
 
-//Open initialize a new db connection
+//Open initialize a new redis connection
 func (g *group) dial(config GroupYml, address string, maxIdle int) *redis.Pool {
 	dial := func() (redis.Conn, error) {
 		r, err  := Dial(address,

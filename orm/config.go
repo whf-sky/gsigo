@@ -13,11 +13,10 @@ type dbGroupsYml struct {
 	Dsn 		string  	`yaml:"dsn"`
 	MaxOpen 	int 		`yaml:"maxOpen"`
 	MaxIdle 	int 		`yaml:"maxIdle"`
+	//unit hour
 	MaxLifetime int 		`yaml:"maxLifetime"`
 	Master 		MasterYml 	`yaml:"master"`
 	Slave  		SlaveYml 	`yaml:"slave"`
-	//Dbname string `yaml:"dbname"`
-	//Charset string `yaml:"charset"`
 }
 
 type MasterYml struct {

@@ -11,10 +11,13 @@ var configs map[string]GroupYml
 
 // redis config items
 type GroupYml struct {
+	//host:port
 	Address string `yaml:"address"`
+	//password
 	Password string `yaml:"password"`
 	ClientName string `yaml:"clientName"`
 	Db int `yaml:"db"`
+	//unit hour
 	KeepAlive int `yaml:"keepAlive"`
 	MaxIdle int `yaml:"maxIdle"`
 	Master MasterYml `yaml:"master"`
@@ -22,11 +25,13 @@ type GroupYml struct {
 }
 
 type MasterYml struct {
+	//host:port
 	Address string `yaml:"address"`
 	MaxIdle int `yaml:"maxIdle"`
 }
 
 type SlaveYml struct {
+	//host:port
 	Address []string `yaml:"address"`
 	MaxIdle int `yaml:"maxIdle"`
 }

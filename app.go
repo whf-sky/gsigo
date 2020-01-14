@@ -11,17 +11,25 @@ import (
 var (
 	// Wsi is an application instance
 	ENV string
+	//system yml config
 	Config *systemCnf
+	//logrus Logger
 	Log *logrus.Logger
+	//new socketio
 	Socketio *socketio
+	//new gin
 	Gin *gin
 )
 
+
 func init() {
+	//get environment variable
 	flag.StringVar(&ENV, "env", "production","input environment variable")
 	flag.Parse()
 
+	//parse system yml config
 	systemYmlParse()
+	//new log
 	Log = log.Newlog(
 		Config.Log.Formatter,
 		Config.Log.Syslog.Network,
@@ -29,9 +37,11 @@ func init() {
 		Config.Log.Syslog.Priority,
 		Config.Log.Syslog.Tag,
 		Config.Debug)
+	//new gin, socketio, cmd router
 	newRouter()
 }
 
+//defaultRun run socketio, gin server
 func defaultRun(addr ...string){
 	Socketio = newSocketio()
 	go Socketio.serve()
@@ -39,6 +49,7 @@ func defaultRun(addr ...string){
 	ginRun(addr...)
 }
 
+//ginRun run gin server
 func ginRun (addr ...string)  {
 	Gin = newGin()
 	Gin.Server.Use(func(c *ggin.Context) {
@@ -61,16 +72,15 @@ func ginRun (addr ...string)  {
 	Gin.run(addr...)
 }
 
+//cmdRun run cmd server
 func cmdRun(){
 	for _,cmd := range routerObj.cmd {
-		//go func() {
-		//	cmd.Init()
-		//	cmd.Execute()
-		//}()
-		cmd.Init()
-		cmd.Execute()
+		go func() {
+			cmd.Init()
+			cmd.Execute()
+		}()
 	}
-	//select {}
+	select {}
 }
 
 //createProject is create a gsigo project

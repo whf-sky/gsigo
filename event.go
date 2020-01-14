@@ -2,20 +2,24 @@ package gsigo
 
 import (
 	"errors"
-	"github.com/sirupsen/logrus"
-	"github.com/whf-sky/gsigo/log"
 	gsocketio "github.com/googollee/go-socket.io"
 )
 
 type Event struct {
+	// is ack
 	Ack bool
+	//socketio connect
 	Conn gsocketio.Conn
-	Log *logrus.Entry
+	//socketio event type
 	EventType string
 
+	//socketio message
 	message string
+	//socketio namespace
 	namespace string
+	//socketio error
 	error error
+	//socketio ack message
 	ackMsg string
 }
 
@@ -36,17 +40,9 @@ func (e *Event)Init(eventType string, conn gsocketio.Conn, message string, err e
 	e.message = message
 	e.error = err
 	e.ackMsg = ""
-	fields := logrus.Fields{
-		"logid":log.GenerateLogid(),
-	}
-	if conn != nil {
-		fields["ip"] = conn.RemoteAddr()
-		fields["cid"] = conn.ID()
-		e.namespace = conn.Namespace()
-	}
-	e.Log = Log.WithFields(fields)
 }
 
+//SetUser is binding user
 func (e *Event) SetUser(uid string)  {
 	cid := e.Conn.ID()
 	// get write lock
@@ -63,6 +59,7 @@ func (e *Event) SetUser(uid string)  {
 	}
 }
 
+//GetUser is get user by connect id
 func (e *Event) GetUser() string {
 	// get read lock
 	Socketio.lock.RLock()
@@ -74,6 +71,7 @@ func (e *Event) GetUser() string {
 	return ""
 }
 
+//GetCidsByUser get connect ids by user
 func (e *Event) GetCidsByUser(uid string) map[string]int {
 	// get read lock
 	Socketio.lock.RLock()
@@ -84,30 +82,37 @@ func (e *Event) GetCidsByUser(uid string) map[string]int {
 	return nil
 }
 
+//IsAck is ack
 func (e *Event) IsAck() bool {
 	return e.Ack
 }
 
+//GetMessage get event message
 func (e *Event) GetMessage() string {
 	return e.message
 }
 
+//SetAckMsg set socketio 'event' event ack msg
 func (e *Event) SetAckMsg(msg string) {
 	e.ackMsg = msg
 }
 
+//GetAckMsg get socketio 'event' event ack msg
 func (e *Event) GetAckMsg() string{
 	return e.ackMsg
 }
 
+//GetNamespace get socketio namespace
 func (e *Event) GetNamespace() string{
 	return e.namespace
 }
 
+//SetError set socketio error
 func (e *Event) SetError(text string) {
 	e.error = errors.New(text)
 }
 
+//GetError is get socketio event error
 func (e *Event) GetError() error {
 	return e.error
 }

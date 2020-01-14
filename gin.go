@@ -16,10 +16,15 @@ func newGin() *gin {
 	return s
 }
 
+//gin
+//Server is *gin.Engine
+//rgroup *gin.RouterGroup
 type gin struct {
 	Server *ggin.Engine
+	rgroup *ggin.RouterGroup
 }
 
+//newServer create gin
 func (g *gin) newServer() {
 	if !Config.Debug {
 		ggin.SetMode(ggin.ReleaseMode)
@@ -28,6 +33,7 @@ func (g *gin) newServer() {
 	g.register()
 }
 
+//run http.ListenAndServe
 func (g *gin) run(addr ...string)  {
 	address := g.resolveAddress(addr)
 	g.debugPrint("Listening and serving HTTP on "+address)
@@ -38,39 +44,7 @@ func (g *gin) run(addr ...string)  {
 	return
 }
 
-func (g *gin) register(){
-	for relativePath, group:=range routerObj.gin  {
-		if handle, ok := routerObj.group[relativePath]; ok {
-			g.Group(relativePath, handle)
-		}
-		for method, request :=  range group  {
-			switch method {
-			case "Post":
-				g.POST(request.relativePath, request.controller)
-			case "Get":
-				g.GET(request.relativePath, request.controller)
-			case "Delete":
-				g.DELETE(request.relativePath, request.controller)
-			case "Put":
-				g.PUT(request.relativePath, request.controller)
-			case "Head":
-				g.HEAD(request.relativePath, request.controller)
-			case "Patch":
-				g.PATCH(request.relativePath, request.controller)
-			case "Options":
-				g.OPTIONS(request.relativePath, request.controller)
-			case "Any":
-				g.Any(request.relativePath, request.controller)
-			case "Use":
-				g.Use(request.controller)
-			default:
-				g.GET(request.relativePath, request.controller)
-			}
-
-		}
-	}
-}
-
+//resolveAddress resolve address
 func (g *gin) resolveAddress(addr []string) string {
 	switch len(addr) {
 	case 0:
@@ -87,6 +61,7 @@ func (g *gin) resolveAddress(addr []string) string {
 	}
 }
 
+//debugPrint print debug info
 func (g *gin) debugPrint(format string, values ...interface{}) {
 	if Config.Debug {
 		if !strings.HasSuffix(format, "\n") {
@@ -96,6 +71,44 @@ func (g *gin) debugPrint(format string, values ...interface{}) {
 	}
 }
 
+//register is register router
+// For GET, POST, PUT, PATCH, HEAD, OPTIONS, DELETE, Any, Use requests the respective shortcut
+func (g *gin) register() {
+	for relativePath, group:=range routerObj.gin  {
+		if handle, ok := routerObj.group[relativePath]; ok {
+			g.rgroup = g.group(relativePath, handle)
+		} else {
+			g.rgroup = g.group("/", nil)
+		}
+		for method, request :=  range group  {
+			switch method {
+			case "Post":
+				g.post(request.relativePath, request.controller)
+			case "Get":
+				g.get(request.relativePath, request.controller)
+			case "Delete":
+				g.delete(request.relativePath, request.controller)
+			case "Put":
+				g.put(request.relativePath, request.controller)
+			case "Head":
+				g.head(request.relativePath, request.controller)
+			case "Patch":
+				g.patch(request.relativePath, request.controller)
+			case "Options":
+				g.options(request.relativePath, request.controller)
+			case "Any":
+				g.any(request.relativePath, request.controller)
+			case "Use":
+				g.use(request.controller)
+			default:
+				g.get(request.relativePath, request.controller)
+			}
+
+		}
+	}
+}
+
+//getController is get controller name
 func (g *gin) getController(c ControllerInterface) string {
 	reflectVal := reflect.ValueOf(c)
 	ct := reflect.Indirect(reflectVal).Type()
@@ -103,14 +116,16 @@ func (g *gin) getController(c ControllerInterface) string {
 	return controllerName
 }
 
-func (g *gin) funcHandle(c ControllerInterface, ctx *ggin.Context, actionName string) {
+//handle is handle for action
+func (g *gin) handle(c ControllerInterface, ctx *ggin.Context, actionName string) {
 	c.Init(ctx, g.getController(c), actionName)
 	c.Prepare()
-	g.excuteAction(c, actionName)
+	g.execute(c, actionName)
 	c.Finish()
 }
 
-func (g *gin) excuteAction(c ControllerInterface, actionName string){
+//execute is execute action for controller
+func (g *gin) execute(c ControllerInterface, actionName string){
 	switch actionName {
 	case "Post":
 		c.Post()
@@ -137,88 +152,86 @@ func (g *gin) excuteAction(c ControllerInterface, actionName string){
 	}
 }
 
-// Group creates a new router group. You should add all the routes that have common middlewares or the same path prefix.
+// group creates a new router group. You should add all the routes that have common middlewares or the same path prefix.
 // For example, all the routes that use a common middleware for authorization could be grouped.
-func (g *gin) Group(relativePath string, c ControllerInterface) *gin {
+func (g *gin) group(relativePath string, c ControllerInterface) *ggin.RouterGroup {
 	if c == nil {
-		g.Server.Group(relativePath)
-	} else {
-		g.Server.Group(relativePath, func(context *ggin.Context) {
-			g.funcHandle(c, context, "Group")
-		})
+		return g.Server.Group(relativePath)
 	}
-	return g
+	return g.Server.Group(relativePath, func(context *ggin.Context) {
+		g.handle(c, context, "Group")
+	})
 }
 
 // Use adds middleware to the group.
-func (g *gin) Use(middleware ControllerInterface) *gin {
-	g.Server.Use(func(context *ggin.Context) {
-		g.funcHandle(middleware, context, "Use")
+func (g *gin) use(middleware ControllerInterface) *gin {
+	g.rgroup.Use(func(context *ggin.Context) {
+		g.handle(middleware, context, "Use")
 	})
 	return g
 }
 
 // POST is a shortcut for router.Handle("POST", path, handle).
-func (g *gin) POST(relativePath string, c ControllerInterface) *gin {
-	g.Server.POST(relativePath, func(context *ggin.Context) {
-		g.funcHandle(c, context, "Post")
+func (g *gin) post(relativePath string, c ControllerInterface) *gin {
+	g.rgroup.POST(relativePath, func(context *ggin.Context) {
+		g.handle(c, context, "Post")
 	})
 	return g
 }
 
 // GET is a shortcut for router.Handle("GET", path, handle).
-func (g *gin) GET(relativePath string, c ControllerInterface) *gin {
-	g.Server.GET(relativePath, func(context *ggin.Context) {
-		g.funcHandle(c, context, "Get")
+func (g *gin) get(relativePath string, c ControllerInterface) *gin {
+	g.rgroup.GET(relativePath, func(context *ggin.Context) {
+		g.handle(c, context, "Get")
 	})
 	return g
 }
 
 // DELETE is a shortcut for router.Handle("DELETE", path, handle).
-func (g *gin) DELETE(relativePath string, c ControllerInterface) *gin {
-	g.Server.DELETE(relativePath, func(context *ggin.Context) {
-		g.funcHandle(c, context, "Delete")
+func (g *gin) delete(relativePath string, c ControllerInterface) *gin {
+	g.rgroup.DELETE(relativePath, func(context *ggin.Context) {
+		g.handle(c, context, "Delete")
 	})
 	return g
 }
 
 // PATCH is a shortcut for router.Handle("PATCH", path, handle).
-func (g *gin) PATCH(relativePath string, c ControllerInterface) *gin {
-	g.Server.PATCH(relativePath, func(context *ggin.Context) {
-		g.funcHandle(c, context, "Patch")
+func (g *gin) patch(relativePath string, c ControllerInterface) *gin {
+	g.rgroup.PATCH(relativePath, func(context *ggin.Context) {
+		g.handle(c, context, "Patch")
 	})
 	return g
 }
 
 // PUT is a shortcut for router.Handle("PUT", path, handle).
-func (g *gin) PUT(relativePath string, c ControllerInterface) *gin {
-	g.Server.PUT(relativePath, func(context *ggin.Context) {
-		g.funcHandle(c, context, "Put")
+func (g *gin) put(relativePath string, c ControllerInterface) *gin {
+	g.rgroup.PUT(relativePath, func(context *ggin.Context) {
+		g.handle(c, context, "Put")
 	})
 	return g
 }
 
 // OPTIONS is a shortcut for router.Handle("OPTIONS", path, handle).
-func (g *gin) OPTIONS(relativePath string, c ControllerInterface) *gin {
-	g.Server.OPTIONS(relativePath, func(context *ggin.Context) {
-		g.funcHandle(c, context, "Options")
+func (g *gin) options(relativePath string, c ControllerInterface) *gin {
+	g.rgroup.OPTIONS(relativePath, func(context *ggin.Context) {
+		g.handle(c, context, "Options")
 	})
 	return g
 }
 
 // HEAD is a shortcut for router.Handle("HEAD", path, handle).
-func (g *gin) HEAD(relativePath string, c ControllerInterface) *gin {
-	g.Server.HEAD(relativePath, func(context *ggin.Context) {
-		g.funcHandle(c, context, "Head")
+func (g *gin) head(relativePath string, c ControllerInterface) *gin {
+	g.rgroup.HEAD(relativePath, func(context *ggin.Context) {
+		g.handle(c, context, "Head")
 	})
 	return g
 }
 
 // Any registers a route that matches all the HTTP methods.
 // GET, POST, PUT, PATCH, HEAD, OPTIONS, DELETE, CONNECT, TRACE.
-func (g *gin) Any(relativePath string, c ControllerInterface) *gin {
-	g.Server.Any(relativePath, func(context *ggin.Context) {
-		g.funcHandle(c, context, "Any")
+func (g *gin) any(relativePath string, c ControllerInterface) *gin {
+	g.rgroup.Any(relativePath, func(context *ggin.Context) {
+		g.handle(c, context, "Any")
 	})
 	return g
 }

@@ -12,10 +12,13 @@ const (
 
 var gsigoMode = ModeDefault
 
+//SetMode set mode
+//For ModeDefault, ModeGin, ModeCmd, ModeInit
 func SetMode(mode int)  {
 	gsigoMode = mode
 }
 
+//run gsigo
 func Run(addr ...string) {
 	switch gsigoMode {
 	case ModeCmd:
@@ -30,4 +33,3 @@ func Run(addr ...string) {
 		defaultRun(addr...)
 	}
 }
-

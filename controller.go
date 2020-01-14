@@ -2,8 +2,6 @@ package gsigo
 
 import (
 	ggin "github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
-	"github.com/whf-sky/gsigo/log"
 	"net/http"
 )
 
@@ -12,8 +10,6 @@ import (
 type Controller struct {
 	// context data
 	Ctx  *ggin.Context
-	//logrus log entry
-	Log *logrus.Entry
 
 	// route controller info
 	controllerName string
@@ -43,10 +39,6 @@ func (c *Controller) Init(ctx *ggin.Context, controllerName, actionName string) 
 	c.controllerName = controllerName
 	c.actionName = actionName
 	c.Ctx = ctx
-	c.Log = Log.WithFields(logrus.Fields{
-		"ip": ctx.ClientIP(),
-		"logid":log.GenerateLogid(),
-	})
 }
 
 // Prepare runs after Init before request function execution.

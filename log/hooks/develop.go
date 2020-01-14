@@ -9,9 +9,7 @@ import (
 type Stdout struct {
 }
 
-// Creates a hook to be added to an instance of logger. This is called with
-// `hook, err := NewSyslogHook("udp", "localhost:514", syslog.LOG_DEBUG, "")`
-// `if err == nil { log.Hooks.Add(hook) }`
+// Creates a hook to be added to an instance of logger.
 func DevelopNew() (*Stdout) {
 	return &Stdout{}
 }
