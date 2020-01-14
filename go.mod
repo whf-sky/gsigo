@@ -1,4 +1,4 @@
-module github.com/whf-sky/wsigo
+module github.com/whf-sky/gsigo
 
 go 1.12
 
