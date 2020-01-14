@@ -18,7 +18,7 @@ replace golang.org/x/crypto => github.com/golang/crypto v0.0.0-20191206172530-e9
 
 replace golang.org/x/text => github.com/golang/text v0.3.2
 
-replace golang.org/x/lint => github.com/golang/lint
+replace golang.org/x/lint => github.com/golang/lint v0.0.0-20191125180803-fdd1cda4f05f
 
 require (
 	github.com/gin-gonic/gin v1.5.0
