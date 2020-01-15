@@ -5,12 +5,10 @@ import (
 	"runtime"
 )
 
-// StdoutHook to send logs via syslog.
 type Stdout struct {
 }
 
-// Creates a hook to be added to an instance of logger.
-func DevelopNew() (*Stdout) {
+func NewDefault() (*Stdout) {
 	return &Stdout{}
 }
 

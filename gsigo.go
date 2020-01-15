@@ -1,35 +1,52 @@
 package gsigo
 
+import "github.com/whf-sky/gsigo/log"
+
 // VERSION represent gsigo gin socketio framework version.
 const VERSION = "1.0.0"
 
 const (
-	ModeDefault = iota//gin+socketio
-	ModeGin
-	ModeCmd
-	ModeInit
+	ModeDefault = "default"
+	ModeGin = "gin"
+	ModeCmd = "cmd"
+	ModeInit = "init"
 )
 
-var gsigoMode = ModeDefault
-
-//SetMode set mode
-//For ModeDefault, ModeGin, ModeCmd, ModeInit
-func SetMode(mode int)  {
-	gsigoMode = mode
-}
-
 //run gsigo
-func Run(addr ...string) {
-	switch gsigoMode {
+func Run(config ...string) {
+	if len(config) > 0 {
+		configfile = config[0]
+	}
+	//parse app yml config
+	appYmlParse()
+
+	//init mode
+	if Config.Mode == "" {
+		Config.Mode = ModeDefault
+	}
+
+	if configfile == "" {
+		Config.Debug = true
+	}
+
+	//new log
+	Log = log.Newlog(
+		Config.Log.Hook,
+		Config.Log.Formatter,
+		Config.Log.Params,
+		Config.Debug)
+
+	//run
+	switch Config.Mode {
+	case ModeDefault:
+		defaultRun()
+	case ModeGin:
+		ginRun()
 	case ModeCmd:
 		cmdRun()
-	case ModeGin:
-		ginRun(addr...)
-	case ModeDefault:
-		defaultRun(addr...)
 	case ModeInit:
 		createProject()
 	default:
-		defaultRun(addr...)
+		defaultRun()
 	}
 }

@@ -17,12 +17,18 @@ func newRouter() *router{
 
 //router For gin, socketio, cmd router
 type router struct {
-	relativePath string //gin relativePath
-	nsp map[string]EventInterface //socketio nsp
-	group map[string]ControllerInterface //gin group
-	socketio map[string]map[string]map[string]EventInterface //socketio routers
-	gin map[string]map[string]gRouter// gin routers
-	cmd []CmdInterface //cmd routers
+	//gin relativePath
+	relativePath string
+	//socketio nsp
+	nsp map[string]EventInterface
+	//gin group
+	group map[string]ControllerInterface
+	//socketio routers
+	socketio map[string]map[string]map[string]EventInterface
+	// gin routers
+	gin map[string]map[string]gRouter
+	//cmd routers
+	cmd []CmdInterface
 }
 
 //event add router

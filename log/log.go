@@ -6,20 +6,22 @@ import (
 	"io/ioutil"
 	"log/syslog"
 	"math/rand"
-	"runtime"
 	"strconv"
 	"time"
 )
+
+//log hooks
+var Hooks map[string]func(params map[string]string)logrus.Hook
 
 type log struct {
 	logrus *logrus.Logger
 }
 
 //Newlog new log
-func Newlog(formatter string, network string, raddr string, priority string, tag string, debug bool) *logrus.Logger {
+func Newlog(hook string,formatter string, params map[string]string, debug bool) *logrus.Logger {
 	log := &log{}
 	log.newLogrus(formatter, debug)
-	log.hook(network, raddr, priority, tag)
+	log.hook(hook, params)
 	return log.logrus
 }
 
@@ -39,25 +41,30 @@ func (l *log) newLogrus(Formatter string, Debug bool)  {
 }
 
 //hook
-func (l *log) hook(network string, raddr string, priority string, tag string)  {
-	if runtime.GOOS == "linux" {
-		l.syslogHook(network, raddr, priority, tag)
-	} else {
-		l.developHook()
+func (l *log) hook(hook string, params map[string]string)  {
+	if fun, ok := Hooks[hook]; ok {
+		l.logrus.Hooks.Add(fun(params))
+		return
+	}
+	switch hook {
+	case "syslog":
+		l.syslogHook(params)
+	default:
+		l.defaultHook()
 	}
 }
 
 //developHook develop hook
-func (l *log) developHook()  {
-	hook := hooks.DevelopNew()
+func (l *log) defaultHook()  {
+	hook := hooks.NewDefault()
 	l.logrus.Hooks.Add(hook)
 }
 
 //syslogHook is syslog hook
-func (l *log) syslogHook(network string, raddr string, priorityStr string, tag string)  {
+func (l *log) syslogHook(params map[string]string)  {
 	l.logrus.Out = ioutil.Discard
 	var priority syslog.Priority
-	switch priorityStr {
+	switch params["priority"] {
 	case "LOG_LOCAL0":
 		priority = syslog.LOG_LOCAL0
 	case "LOG_LOCAL1":
@@ -77,7 +84,7 @@ func (l *log) syslogHook(network string, raddr string, priorityStr string, tag s
 	default:
 		priority = syslog.LOG_LOCAL0
 	}
-	hook, err := hooks.NewSyslogHook(network, raddr, priority, tag)
+	hook, err := hooks.NewSyslogHook(params["network"], params["addr"], priority, params["tag"])
 	if err == nil {
 		l.logrus.Hooks.Add(hook)
 	} else {
