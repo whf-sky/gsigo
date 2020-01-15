@@ -2,6 +2,8 @@ module github.com/whf-sky/gsigo
 
 go 1.12
 
+replace golang.org/x/lint => github.com/golang/lint v0.0.0-20191125180803-fdd1cda4f05f
+
 replace golang.org/x/sync => github.com/golang/sync v0.0.0-20190911185100-cd5d95a43a6e
 
 replace golang.org/x/sys => github.com/golang/sys v0.0.0-20191210023423-ac6580df4449
@@ -17,8 +19,6 @@ replace golang.org/x/net => github.com/golang/net v0.0.0-20191209160850-c0dbc17a
 replace golang.org/x/crypto => github.com/golang/crypto v0.0.0-20191206172530-e9b2fee46413
 
 replace golang.org/x/text => github.com/golang/text v0.3.2
-
-replace golang.org/x/lint => github.com/golang/lint v0.0.0-20191125180803-fdd1cda4f05f
 
 require (
 	github.com/gin-gonic/gin v1.5.0
