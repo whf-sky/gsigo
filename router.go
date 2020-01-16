@@ -70,20 +70,26 @@ func (r *router) OnDisconnect(event EventInterface){
 
 type gRouter struct {
 	relativePath string
+	filePath string
 	controller ControllerInterface
 }
 
 // Request registers a new request handle and middleware with the given path and method.
 // The last handler should be the real handler, the other ones should be middleware that can and should be shared among different routes.
 // For GET, POST, PUT, PATCH, HEAD, OPTIONS, DELETE, Any requests the respective shortcut
-func (r *router) Request(method string, relativePath string, controller ControllerInterface) {
+func (r *router) Request(method string, relativePath string, controller ControllerInterface, filePaths ...string) {
 	_, ok := r.gin[r.relativePath]
 	if !ok {
 		r.gin[r.relativePath] = map[string]gRouter{}
 	}
+	filePath := ""
+	if len(filePaths) == 1{
+		filePath = filePaths[0]
+	}
 	r.gin[r.relativePath][method] = gRouter{
 		relativePath:relativePath,
 		controller: controller,
+		filePath: filePath,
 	}
 }
 
@@ -131,4 +137,9 @@ func (r *router) HEAD(relativePath string, controller ControllerInterface) {
 // GET, POST, PUT, PATCH, HEAD, OPTIONS, DELETE, CONNECT, TRACE.
 func (r *router) Any(relativePath string, controller ControllerInterface) {
 	r.Request("Any", relativePath, controller)
+}
+
+// Static add static resource
+func (r *router) Static(relativePath string, filePath string) {
+	r.Request("Static", relativePath,nil, filePath)
 }

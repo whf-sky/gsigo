@@ -1,109 +1,64 @@
 package gsigo
 
 import (
-	"gopkg.in/yaml.v2"
-	"io/ioutil"
+	"github.com/whf-sky/gsigo/config"
 )
 
-type AppCnf struct
-{
+//gsigo config
+type gsigoCnf struct {
+	//application config
+	APP APPCnf `ini:"app"`
+	//socket config
+	Socket SocketCnf `ini:"socket"`
+	//log config
+	Log LogCnf `ini:"log"`
+}
+
+//application config for gsigo config
+type APPCnf struct {
+	//application name
+	Name string `ini:"name"`
+	//server address
+	Host string `ini:"host"`
+	//server port
+	Port string `ini:"port"`
+	//gsigo mode
+	Mode string `ini:"mode"`
 	//is open debug
 	//value is true/false
-	Debug bool `yaml:"debug"`
-	//gsigo mode
-	Mode string `yaml:"mode"`
-	//server address
-	//default port: 8080
-	//example :
-	//:8080, 0.0.0.0:8080
-	Addr string `yaml:"addr"`
+	Debug bool `ini:"debug"`
+}
+
+//socket config for gsigo config
+type SocketCnf struct {
 	//socketio ping time out
 	//Unit second
-	PingTimeout int `yaml:"pingTimeout"`
+	PingTimeout int `ini:"ping_timeout"`
 	//socketio ping interval
 	//Unit second
-	PingInterval int `yaml:"pingInterval"`
-	//log config
-	Log logCnf `yaml:"log"`
-	//web static dir
-	Static staticCnf `yaml:"static"`
+	PingInterval int `ini:"ping_interval"`
 }
 
-//static config
-type staticCnf struct {
-	//web url path
-	UrlPath string `yaml:"urlpath"`
-	//file dir
-	FilePath string `yaml:"filepath"`
-}
-
-//log config
-type logCnf struct {
+//log config for gsigo config
+type LogCnf struct {
 	//logrus log hook
 	//hook: syslog,
-	Hook  string `yaml:"hook"`
+	Hook string `ini:"hook"`
 	//Formatter json/text
-	Formatter string `yaml:"formatter"`
+	Formatter string `ini:"formatter"`
 	//log params config
-	Params map[string]string `yaml:"params"`
+	Params map[string]string `ini:"params"`
 }
 
-//appYmlParse parse application yml config
-func appYmlParse() {
-	if configfile == "" {
+//loadConfig load ini file config info
+func loadConfig(file ...string) {
+	if len(file) == 0 {
+		Config.APP.Debug = true
 		return
 	}
-	var configs map[string]AppCnf
-	data, _ := ioutil.ReadFile(configfile)
-	err := yaml.Unmarshal(data, &configs)
+	ConfigPath =  file[0]
+	err  := config.NewIni().ReadMerge( &Config, ConfigPath, ENV)
 	if err != nil {
-		Log.Error(err)
-	}
-
-	//Common environment variable
-	if cnf, ok := configs["gsigo"];ok {
-		Config = cnf
-	}
-
-	//environment variable for ENV
-	cnf, ok := configs[ENV];
-	if !ok {
-		return
-	}
-
-	if cnf.Debug == true {
-		Config.Debug = true
-	}
-
-	if cnf.Addr != "" {
-		Config.Addr = cnf.Addr
-	}
-
-	if cnf.Mode != "" {
-		Config.Mode = cnf.Mode
-	}
-
-	if cnf.PingTimeout != 0 {
-		Config.PingTimeout = cnf.PingTimeout
-	}
-
-	if cnf.PingInterval != 0 {
-		Config.PingInterval = cnf.PingInterval
-	}
-
-	if cnf.Static.FilePath != "" &&  cnf.Static.UrlPath != ""{
-		Config.Static.FilePath = cnf.Static.FilePath
-	}
-
-	if cnf.Log.Hook != ""{
-		Config.Log.Hook = cnf.Log.Hook
-	}
-
-	if cnf.Log.Formatter != "" {
-		Config.Static.FilePath = cnf.Static.FilePath
-	}
-
-	if cnf.Log.Params != nil {
-		Config.Log.Params = cnf.Log.Params
+		panic(err)
 	}
 }

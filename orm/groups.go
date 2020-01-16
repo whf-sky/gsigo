@@ -27,7 +27,7 @@ func using(gname ...string) map[string]*group {
 
 //database group
 type group struct {
-	Config 	dbGroupsYml
+	Config 	dbGroupsCnf
 	Db 		*gorm.DB
 	Master 	*gorm.DB
 	Slave 	[]*gorm.DB

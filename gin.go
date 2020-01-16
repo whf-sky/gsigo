@@ -4,6 +4,7 @@ import (
 	"fmt"
 	ggin "github.com/gin-gonic/gin"
 	"github.com/tabalt/gracehttp"
+	"net/http"
 	"os"
 	"reflect"
 	"strings"
@@ -26,7 +27,7 @@ type gin struct {
 
 //newServer create gin
 func (g *gin) newServer() {
-	if !Config.Debug {
+	if !Config.APP.Debug {
 		ggin.SetMode(ggin.ReleaseMode)
 	}
 	g.Server = ggin.New()
@@ -63,7 +64,7 @@ func (g *gin) resolveAddress(addr []string) string {
 
 //debugPrint print debug info
 func (g *gin) debugPrint(format string, values ...interface{}) {
-	if Config.Debug {
+	if Config.APP.Debug {
 		if !strings.HasSuffix(format, "\n") {
 			format += "\n"
 		}
@@ -100,6 +101,8 @@ func (g *gin) register() {
 				g.any(request.relativePath, request.controller)
 			case "Use":
 				g.use(request.controller)
+			case "Static":
+				g.Static(request.relativePath, request.filePath)
 			default:
 				g.get(request.relativePath, request.controller)
 			}
@@ -233,5 +236,11 @@ func (g *gin) any(relativePath string, c ControllerInterface) *gin {
 	g.rgroup.Any(relativePath, func(context *ggin.Context) {
 		g.handle(c, context, "Any")
 	})
+	return g
+}
+
+// Static add static resource
+func (g *gin) Static(relativePath string, filePath string) *gin {
+	g.rgroup.StaticFS(relativePath, http.Dir(filePath))
 	return g
 }

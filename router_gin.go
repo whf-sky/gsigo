@@ -59,3 +59,8 @@ func HEAD(relativePath string, controller ControllerInterface) {
 func Any(relativePath string, controller ControllerInterface) {
 	routerObj.Any(relativePath, controller)
 }
+
+// Static add static resource
+func Static(relativePath string, filePath string) {
+	routerObj.Static(relativePath, filePath)
+}

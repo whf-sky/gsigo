@@ -27,7 +27,7 @@ func using(gname ...string) map[string]*group {
 
 //redis group
 type group struct {
-	Config 	GroupYml
+	Config 	GroupCnf
 	Pool 	*redis.Pool
 	Master 	*redis.Pool
 	Slave 	[]*redis.Pool
@@ -59,11 +59,11 @@ func (g *group) get(name string) *group {
 }
 
 //Open initialize a new redis connection
-func (g *group) dial(config GroupYml, address string, maxIdle int) *redis.Pool {
+func (g *group) dial(config GroupCnf, address string, maxIdle int) *redis.Pool {
 	dial := func() (redis.Conn, error) {
 		r, err  := Dial(address,
 						redis.DialPassword(config.Password),
-						redis.DialDatabase(config.Db),
+						redis.DialDatabase(config.Select),
 						redis.DialKeepAlive(time.Second * time.Duration(config.KeepAlive)))
 		return r, err
 	}

@@ -2,44 +2,37 @@ package orm
 
 import (
 	"github.com/whf-sky/gsigo"
-	"gopkg.in/yaml.v2"
-	"io/ioutil"
+	"github.com/whf-sky/gsigo/config"
 )
 
-var configs map[string]dbGroupsYml
+var configs map[string]dbGroupsCnf
 
-type dbGroupsYml struct {
-	Driver 		string  	`yaml:"driver"`
-	Dsn 		string  	`yaml:"dsn"`
-	MaxOpen 	int 		`yaml:"maxOpen"`
-	MaxIdle 	int 		`yaml:"maxIdle"`
+type dbGroupsCnf struct {
+	Driver 		string  	`ini:"driver"`
+	Dsn 		string  	`ini:"dsn"`
+	MaxOpen 	int 		`ini:"max_open"`
+	MaxIdle 	int 		`ini:"max_idle"`
 	//unit hour
-	MaxLifetime int 		`yaml:"maxLifetime"`
-	Master 		MasterYml 	`yaml:"master"`
-	Slave  		SlaveYml 	`yaml:"slave"`
+	MaxLifetime int 		`ini:"max_lifetime"`
+	Master 		MasterCnf 	`ini:"master"`
+	Slave  		SlaveCnf 	`ini:"slave"`
 }
 
-type MasterYml struct {
-	Dsn 	string  `yaml:"dsn"`
-	MaxOpen int 	`yaml:"maxOpen"`
-	MaxIdle int 	`yaml:"maxIdle"`
+type MasterCnf struct {
+	Dsn 	string  `ini:"dsn"`
+	MaxOpen int 	`ini:"max_open"`
+	MaxIdle int 	`ini:"max_idle"`
 }
 
-type SlaveYml struct {
-	Dsn 	[]string  	`yaml:"dsn"`
-	MaxOpen int 		`yaml:"maxOpen"`
-	MaxIdle int 		`yaml:"maxIdle"`
-}
-
-func ymlParse(file string, YmlStruct map[string]dbGroupsYml) map[string]dbGroupsYml {
-	data, _ := ioutil.ReadFile(file)
-	err := yaml.Unmarshal(data, &YmlStruct)
-	if err != nil {
-		gsigo.Log.Error(err)
-	}
-	return YmlStruct
+type SlaveCnf struct {
+	Dsn 	[]string  	`ini:"dsn"`
+	MaxOpen int 		`ini:"max_open"`
+	MaxIdle int 		`ini:"max_idle"`
 }
 
 func init() {
-	configs = ymlParse("./config/"+gsigo.ENV+"/database.yml", map[string]dbGroupsYml{})
+	err := config.NewIni().Read( &configs, "./config/"+gsigo.ENV+"/database.ini")
+	if err != nil {
+		panic(err)
+	}
 }

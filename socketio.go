@@ -39,8 +39,8 @@ type socketio struct {
 func (s *socketio) newServer() {
 	var err error
 	s.Server, err = gsocketio.NewServer(&engineio.Options{
-		PingInterval:time.Duration(Config.PingInterval) * time.Second,
-		PingTimeout:time.Duration(Config.PingTimeout) * time.Second,
+		PingInterval:time.Duration(Config.Socket.PingInterval) * time.Second,
+		PingTimeout:time.Duration(Config.Socket.PingTimeout) * time.Second,
 	})
 	if err != nil {
 		Log.Error(err)

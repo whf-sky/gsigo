@@ -2,50 +2,41 @@ package redis
 
 import (
 	"github.com/whf-sky/gsigo"
-	"gopkg.in/yaml.v2"
-	"io/ioutil"
+	"github.com/whf-sky/gsigo/config"
 )
 
 // Wsi is an application instance
-var configs map[string]GroupYml
+var configs map[string]GroupCnf
 
 // redis config items
-type GroupYml struct {
+type GroupCnf struct {
 	//host:port
-	Address string `yaml:"address"`
+	Address string 		`ini:"address"`
 	//password
-	Password string `yaml:"password"`
-	ClientName string `yaml:"clientName"`
-	Db int `yaml:"db"`
+	Password string 	`ini:"password"`
+	Select int 			`ini:"select"`
 	//unit hour
-	KeepAlive int `yaml:"keepAlive"`
-	MaxIdle int `yaml:"maxIdle"`
-	Master MasterYml `yaml:"master"`
-	Slave SlaveYml `yaml:"slave"`
+	KeepAlive int 		`ini:"keep_alive"`
+	MaxIdle int			`ini:"max_idle"`
+	Master MasterCnf 	`ini:"master"`
+	Slave SlaveCnf 		`ini:"slave"`
 }
 
-type MasterYml struct {
+type MasterCnf struct {
 	//host:port
-	Address string `yaml:"address"`
-	MaxIdle int `yaml:"maxIdle"`
+	Address string 	`ini:"address"`
+	MaxIdle int 	`ini:"max_idle"`
 }
 
-type SlaveYml struct {
+type SlaveCnf struct {
 	//host:port
-	Address []string `yaml:"address"`
-	MaxIdle int `yaml:"maxIdle"`
-}
-
-//ymlParse parse redis config
-func ymlParse(file string, YmlStruct map[string]GroupYml) map[string]GroupYml {
-	data, _ := ioutil.ReadFile(file)
-	err := yaml.Unmarshal(data, &YmlStruct)
-	if err != nil {
-		gsigo.Log.Error(err)
-	}
-	return YmlStruct
+	Address []string 	`ini:"address"`
+	MaxIdle int 		`ini:"max_idle"`
 }
 
 func init() {
-	configs = ymlParse("./config/"+gsigo.ENV+"/redis.yml", map[string]GroupYml{})
+	err := config.NewIni().Read( &configs, "./config/"+gsigo.ENV+"/redis.ini")
+	if err != nil {
+		panic(err)
+	}
 }
