@@ -76,7 +76,7 @@ func ginRun ()  {
 		Gin.Server.POST("/socket.io/*any", ggin.WrapH(Socketio.Server))
 	}
 	addr := Config.APP.Host + ":" + Config.APP.Port
-	if addr == "" {
+	if addr == ":" {
 		addr = ":8080"
 	}
 	Gin.run(addr)
