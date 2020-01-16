@@ -77,7 +77,7 @@ func ginRun ()  {
 	}
 	addr := Config.APP.Host + ":" + Config.APP.Port
 	if addr == ":" {
-		addr = ":8080"
+		addr = "0.0.0.0:8080"
 	}
 	Gin.run(addr)
 }
