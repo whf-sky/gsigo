@@ -15,66 +15,13 @@ func NewDB(gname ...string) *DB  {
 	return (&DB{}).Using(gname...)
 }
 
-
-/*//group middleware
-type GroupHandle func(mode int, groups []string, gid ...interface{}) *group
-//db middleware
-type DbHandle func(dbname string, did ...interface{}) string
-//table middleware
-type TableHandle func(table string, tid ...interface{}) string*/
-
 type DB struct {
-	//Dbname 		string
-	//Table 		string
-
 	db 			*gorm.DB
 	groups 		map[string]*group
 	gnames 		[]string
 	mode 		int
 	curSlave 	int
-
-/*	groupHandle GroupHandle
-	dbHandle 	DbHandle
-	tableHandle TableHandle
-*/
-
 }
-
-
-/*
-//add get database connect middleware for group
-//get database connect use for database horizontal split
-func (d *Dao) Use(middleware GroupHandle) {
-	d.groupHandle = middleware
-}
-
-//add get database name middleware
-//get database name use for database horizontal split
-func (d *Dao) UseDb(middleware DbHandle) {
-	d.dbHandle = middleware
-}
-
-//add get database table name middleware
-//get table name use for table horizontal split
-func (d *Dao) UseTable(middleware TableHandle) {
-	d.tableHandle = middleware
-}
-
-//get database name
-func (d *DB) GetDbname(did ...interface{}) string {
-	if d.dbHandle != nil{
-		return d.dbHandle(d.Dbname, did)
-	}
-	return d.Dbname
-}
-
-//get database table name
-func (d *DB) GetTable(tid ...interface{}) string {
-	if d.dbHandle != nil{
-		return d.tableHandle(d.Table, tid)
-	}
-	return d.Table
-}*/
 
 //open database group
 func (d *DB) Using(gname ...string) *DB {
@@ -110,8 +57,13 @@ func (d *DB) Slave() *DB {
 }
 
 // Create insert the value into database
-func (d *DB) Insert(value interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB {
+func (d *DB) Create(value interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB {
 	return d.Db(ModeMaster, funcs...).Create(value)
+}
+
+// Create insert the value into database
+func (d *DB) Insert(value interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB {
+	return d.Create(value, funcs...)
 }
 
 // Delete delete value match given conditions, if the value has primary key, then will including the primary key as condition

@@ -124,12 +124,12 @@ func (s *socketio)onEvent(eventName string, event EventInterface){
 	var f interface{}
 	if event.IsAck() == false {
 		f = func(conn gsocketio.Conn, message string) {
-			s.groupHandle("connect", s.nsp, conn, message, nil)
+			s.groupHandle("event", s.nsp, conn, message, nil)
 			s.funcHandle("event", event, conn, message, nil)
 		}
 	} else {
 		f = func(conn gsocketio.Conn, message string) string {
-			s.groupHandle("connect", s.nsp, conn, message, nil)
+			s.groupHandle("event", s.nsp, conn, message, nil)
 			return s.funcHandle("event", event, conn, message, nil)
 		}
 	}
