@@ -5,6 +5,7 @@ import (
 	ggin "github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"github.com/whf-sky/gsigo/log"
+	"os"
 )
 
 const (
@@ -51,7 +52,7 @@ func Run(file ...string) {
 }
 
 //load log
-func loadLog (){
+func loadLog () {
 	//new log
 	Log = log.Newlog(
 		Config.Log.Hook,
@@ -61,7 +62,7 @@ func loadLog (){
 }
 
 //defaultRun run socketio, gin server
-func defaultRun(){
+func defaultRun() {
 	Socketio = newSocketio()
 	go Socketio.serve()
 	defer Socketio.close()
@@ -69,7 +70,7 @@ func defaultRun(){
 }
 
 //ginRun run gin server
-func ginRun ()  {
+func ginRun () {
 	Gin = newGin()
 	if Config.APP.Mode == ModeDefault {
 		Gin.Server.GET("/socket.io/*any", ggin.WrapH(Socketio.Server))
@@ -83,7 +84,7 @@ func ginRun ()  {
 }
 
 //cmdRun run cmd server
-func cmdRun(){
+func cmdRun() {
 	for _,cmd := range routerObj.cmd {
 		go func() {
 			cmd.Init()
@@ -95,8 +96,9 @@ func cmdRun(){
 
 func init() {
 	//get environment variable
-	flag.StringVar(&ENV, "env", "production","input environment variable")
-	flag.Parse()
-	//new gin, socketio, cmd router
-	newRouter()
+	ENV = os.Getenv("GSIGO_ENV")
+	if ENV == "" {
+		flag.StringVar(&ENV, "env", "production","input environment variable")
+		flag.Parse()
+	}
 }

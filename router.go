@@ -2,19 +2,6 @@ package gsigo
 
 var routerObj *router
 
-//newRouter function is new router
-func newRouter() *router{
-	routerObj = &router{
-		relativePath: "/",
-		nsp: nil,
-		group: nil,
-		socketio: map[string]map[string]map[string]EventInterface{},
-		gin: map[string]map[string]gRouter{},
-		cmd: []CmdInterface{},
-	}
-	return routerObj
-}
-
 //router For gin, socketio, cmd router
 type router struct {
 	//gin relativePath
@@ -142,4 +129,16 @@ func (r *router) Any(relativePath string, controller ControllerInterface) {
 // Static add static resource
 func (r *router) Static(relativePath string, filePath string) {
 	r.Request("Static", relativePath,nil, filePath)
+}
+
+func init()  {
+	//newRouter function is new router
+	routerObj = &router{
+		relativePath: "/",
+		nsp: nil,
+		group: nil,
+		socketio: map[string]map[string]map[string]EventInterface{},
+		gin: map[string]map[string]gRouter{},
+		cmd: []CmdInterface{},
+	}
 }

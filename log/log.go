@@ -25,7 +25,6 @@ func Newlog(hook string,formatter string, params map[string]string, debug bool) 
 	return log.logrus
 }
 
-
 //newLogrus new Logrus
 func (l *log) newLogrus(Formatter string, Debug bool)  {
 	l.logrus = logrus.New()

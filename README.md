@@ -1229,14 +1229,27 @@ func (r *Redis) Script(keyCount int, src string) *script
 
 > [参考logrus](https://github.com/sirupsen/logrus)
 
+```go
+gsigo.Log.
+```
+
+###### 示例
+
+```go
+gsigo.Log.Trace("this is test!")
+```
+
 ## 环境变量
 
 ###### 环境变量的使用示例
 
-```sh
-$ go run main.go -env=develop
-````
 
 ```sh
-$ export gsigo_env=develop
+$ export GSIGO_ENV=develop
+````
+
+或
+
+```sh
+$ go run main.go -env=develop
 ````
