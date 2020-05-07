@@ -1,66 +1,89 @@
 package gsigo
 
-// Group creates a new router group. You should add all the routes that have common middlewares or the same path prefix.
-// For example, all the routes that use a common middleware for authorization could be grouped.
+//组创建一个新的路由器组。您应该添加所有具有公共中间件或相同路径前缀的路由。
+//例如，所有使用公共中间件进行授权的路由都可以分组。
+//relativePath 网站的相对路径
+//c 组控制器
 func Group(relativePath string, controller ...ControllerInterface) *router{
-	routerObj.relativePath = relativePath
-	if routerObj.group == nil{
-		routerObj.group = map[string]ControllerInterface{}
+	//初始化gin组路由信息
+	routerObj.groupRelativePath = relativePath
+	if routerObj.groupRouters == nil {
+		routerObj.groupRouters = map[string]ControllerInterface{}
 	}
-	routerObj.group[relativePath] = nil
+	//添加gin组路由信息
+	routerObj.groupRouters[relativePath] = nil
 	if len(controller) == 1 {
-		routerObj.group[relativePath] = controller[0]
+		routerObj.groupRouters[relativePath] = controller[0]
 	}
 	return routerObj
 }
 
-// Use adds middleware to the group, see example code in GitHub.
+// Use 在组中添加一个中间件
+//middleware 中间件控制器
 func Use(middleware ControllerInterface) {
 	routerObj.Use(middleware)
 }
 
-// POST is a shortcut for router.Handle("POST", path, handle).
+// POST 添加 POST 路由信息
+//relativePath 网站的相对路径
+//c 中间件控制器
 func POST(relativePath string, controller ControllerInterface) {
 	routerObj.POST(relativePath, controller)
 }
 
-// GET is a shortcut for router.Handle("GET", path, handle).
+// GET 添加 GET 路由信息
+//relativePath 网站的相对路径
+//c 中间件控制器
 func GET(relativePath string, controller ControllerInterface) {
 	routerObj.GET(relativePath, controller)
 }
 
-// DELETE is a shortcut for router.Handle("DELETE", path, handle).
+// DELETE 添加 DELETE 路由信息
+//relativePath 网站的相对路径
+//c 中间件控制器
 func DELETE(relativePath string, controller ControllerInterface) {
 	routerObj.DELETE(relativePath, controller)
 }
 
-// PATCH is a shortcut for router.Handle("PATCH", path, handle).
+// PATCH 添加 PATCH 路由信息
+//relativePath 网站的相对路径
+//c 中间件控制器
 func PATCH(relativePath string, controller ControllerInterface) {
 	routerObj.PATCH(relativePath, controller)
 }
 
-// PUT is a shortcut for router.Handle("PUT", path, handle).
+// PUT 添加 PUT 路由信息
+//relativePath 网站的相对路径
+//c 中间件控制器
 func PUT(relativePath string, controller ControllerInterface) {
 	routerObj.PUT(relativePath, controller)
 }
 
-// OPTIONS is a shortcut for router.Handle("OPTIONS", path, handle).
+// OPTIONS 添加 OPTIONS 路由信息
+//relativePath 网站的相对路径
+//c 中间件控制器
 func OPTIONS(relativePath string, controller ControllerInterface) {
 	routerObj.OPTIONS(relativePath, controller)
 }
 
-// HEAD is a shortcut for router.Handle("HEAD", path, handle).
+// HEAD 添加 HEAD 路由信息
+//relativePath 网站的相对路径
+//c 中间件控制器
 func HEAD(relativePath string, controller ControllerInterface) {
 	routerObj.HEAD(relativePath, controller)
 }
 
-// Any registers a route that matches all the HTTP methodWsiApp.socketio.
+// Any 注册一个匹配所有HTTP方法的路由。
 // GET, POST, PUT, PATCH, HEAD, OPTIONS, DELETE, CONNECT, TRACE.
+//relativePath 网站的相对路径
+//c 控制器方法
 func Any(relativePath string, controller ControllerInterface) {
 	routerObj.Any(relativePath, controller)
 }
 
-// Static add static resource
+// Static 添加静态资源路由
+//relativePath 网站的相对路径
+//filePath 文件的路径
 func Static(relativePath string, filePath string) {
 	routerObj.Static(relativePath, filePath)
 }

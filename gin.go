@@ -2,7 +2,7 @@ package gsigo
 
 import (
 	"fmt"
-	ggin "github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin"
 	"github.com/tabalt/gracehttp"
 	"net/http"
 	"os"
@@ -10,43 +10,44 @@ import (
 	"strings"
 )
 
-// NewApp returns a new wsigo application.
-func newGin() *gin {
-	s := &gin{}
+// NewApp 实例化 ggin
+func newGgin() *ggin {
+	s := &ggin{}
 	s.newServer()
 	return s
 }
 
 //gin
-//Server is *gin.Engine
-//rgroup *gin.RouterGroup
-type gin struct {
-	Server *ggin.Engine
-	rgroup *ggin.RouterGroup
+type ggin struct {
+	Engine *gin.Engine
+	RouterGroup *gin.RouterGroup
 }
 
 //newServer create gin
-func (g *gin) newServer() {
+func (g *ggin) newServer() {
+	//设置gin模式信息
 	if !Config.APP.Debug {
-		ggin.SetMode(ggin.ReleaseMode)
+		gin.SetMode(gin.ReleaseMode)
 	}
-	g.Server = ggin.New()
-	g.register()
+	//获取gin的引擎
+	g.Engine = gin.New()
+	//注册路由信息
+	g.registerRouter()
 }
 
-//run http.ListenAndServe
-func (g *gin) run(addr ...string)  {
+//run 使用可平滑重启方式运行
+func (g *ggin) run(addr ...string)  {
 	address := g.resolveAddress(addr)
 	g.debugPrint("Listening and serving HTTP on "+address)
-	err := gracehttp.ListenAndServe(address, g.Server)
+	err := gracehttp.ListenAndServe(address, g.Engine)
 	if err != nil {
 		Log.Error(err)
 	}
 	return
 }
 
-//resolveAddress resolve address
-func (g *gin) resolveAddress(addr []string) string {
+//resolveAddress 分析地址
+func (g *ggin) resolveAddress(addr []string) string {
 	switch len(addr) {
 	case 0:
 		if port := os.Getenv("PORT"); port != "" {
@@ -62,8 +63,8 @@ func (g *gin) resolveAddress(addr []string) string {
 	}
 }
 
-//debugPrint print debug info
-func (g *gin) debugPrint(format string, values ...interface{}) {
+//debugPrint 打印调试信息
+func (g *ggin) debugPrint(format string, values ...interface{}) {
 	if Config.APP.Debug {
 		if !strings.HasSuffix(format, "\n") {
 			format += "\n"
@@ -72,17 +73,20 @@ func (g *gin) debugPrint(format string, values ...interface{}) {
 	}
 }
 
-//register is register router
+//registerRouter 注册gin路由信息
 // For GET, POST, PUT, PATCH, HEAD, OPTIONS, DELETE, Any, Use requests the respective shortcut
-func (g *gin) register() {
-	for relativePath, group:=range routerObj.gin  {
-		if handle, ok := routerObj.group[relativePath]; ok {
-			g.rgroup = g.group(relativePath, handle)
+func (g *ggin) registerRouter() {
+	for groupRelativePath, group := range routerObj.ginRouters  {
+		//注册路由组
+		if handle, ok := routerObj.groupRouters[groupRelativePath]; ok {
+			g.RouterGroup = g.group(groupRelativePath, handle)
 		} else {
-			g.rgroup = g.group("/", nil)
+			g.RouterGroup = g.group("/", nil)
 		}
-		for method, request :=  range group  {
-			switch method {
+
+		//注册路由信息
+		for _, request :=  range group  {
+			switch request.method {
 			case "Post":
 				g.post(request.relativePath, request.controller)
 			case "Get":
@@ -111,8 +115,8 @@ func (g *gin) register() {
 	}
 }
 
-//getController is get controller name
-func (g *gin) getController(c ControllerInterface) string {
+//getController 获取控制器名称
+func (g *ggin) getController(c ControllerInterface) string {
 	reflectVal := reflect.ValueOf(c)
 	ct := reflect.Indirect(reflectVal).Type()
 	controllerName := strings.TrimSuffix(ct.Name(), "Controller")
@@ -120,15 +124,15 @@ func (g *gin) getController(c ControllerInterface) string {
 }
 
 //handle is handle for action
-func (g *gin) handle(c ControllerInterface, ctx *ggin.Context, actionName string) {
+func (g *ggin) handle(c ControllerInterface, ctx *gin.Context, actionName string) {
 	c.Init(ctx, g.getController(c), actionName)
 	c.Prepare()
 	g.execute(c, actionName)
 	c.Finish()
 }
 
-//execute is execute action for controller
-func (g *gin) execute(c ControllerInterface, actionName string){
+//execute 控制器的执行函数
+func (g *ggin) execute(c ControllerInterface, actionName string){
 	switch actionName {
 	case "Post":
 		c.Post()
@@ -155,92 +159,113 @@ func (g *gin) execute(c ControllerInterface, actionName string){
 	}
 }
 
-// group creates a new router group. You should add all the routes that have common middlewares or the same path prefix.
-// For example, all the routes that use a common middleware for authorization could be grouped.
-func (g *gin) group(relativePath string, c ControllerInterface) *ggin.RouterGroup {
+//组创建一个新的路由器组。您应该添加所有具有公共中间件或相同路径前缀的路由。
+//例如，所有使用公共中间件进行授权的路由都可以分组。
+//relativePath 网站的相对路径
+//c 组控制器
+func (g *ggin) group(relativePath string, c ControllerInterface) *gin.RouterGroup {
 	if c == nil {
-		return g.Server.Group(relativePath)
+		return g.Engine.Group(relativePath)
 	}
-	return g.Server.Group(relativePath, func(context *ggin.Context) {
+	return g.Engine.Group(relativePath, func(context *gin.Context) {
 		g.handle(c, context, "Group")
 	})
 }
 
-// Use adds middleware to the group.
-func (g *gin) use(middleware ControllerInterface) *gin {
-	g.rgroup.Use(func(context *ggin.Context) {
+// Use 在组中添加一个中间件
+//middleware 中间件控制器
+func (g *ggin) use(middleware ControllerInterface) *ggin {
+	g.RouterGroup.Use(func(context *gin.Context) {
 		g.handle(middleware, context, "Use")
 	})
 	return g
 }
 
-// POST is a shortcut for router.Handle("POST", path, handle).
-func (g *gin) post(relativePath string, c ControllerInterface) *gin {
-	g.rgroup.POST(relativePath, func(context *ggin.Context) {
+// POST 添加 POST 路由信息
+//relativePath 网站的相对路径
+//c 中间件控制器
+func (g *ggin) post(relativePath string, c ControllerInterface) *ggin {
+	g.RouterGroup.POST(relativePath, func(context *gin.Context) {
 		g.handle(c, context, "Post")
 	})
 	return g
 }
 
-// GET is a shortcut for router.Handle("GET", path, handle).
-func (g *gin) get(relativePath string, c ControllerInterface) *gin {
-	g.rgroup.GET(relativePath, func(context *ggin.Context) {
+// GET 添加 GET 路由信息
+//relativePath 网站的相对路径
+//c 中间件控制器
+func (g *ggin) get(relativePath string, c ControllerInterface) *ggin {
+	g.RouterGroup.GET(relativePath, func(context *gin.Context) {
 		g.handle(c, context, "Get")
 	})
 	return g
 }
 
-// DELETE is a shortcut for router.Handle("DELETE", path, handle).
-func (g *gin) delete(relativePath string, c ControllerInterface) *gin {
-	g.rgroup.DELETE(relativePath, func(context *ggin.Context) {
+// DELETE 添加 DELETE 路由信息
+//relativePath 网站的相对路径
+//c 中间件控制器
+func (g *ggin) delete(relativePath string, c ControllerInterface) *ggin {
+	g.RouterGroup.DELETE(relativePath, func(context *gin.Context) {
 		g.handle(c, context, "Delete")
 	})
 	return g
 }
 
-// PATCH is a shortcut for router.Handle("PATCH", path, handle).
-func (g *gin) patch(relativePath string, c ControllerInterface) *gin {
-	g.rgroup.PATCH(relativePath, func(context *ggin.Context) {
+// PATCH 添加 PATCH 路由信息
+//relativePath 网站的相对路径
+//c 中间件控制器
+func (g *ggin) patch(relativePath string, c ControllerInterface) *ggin {
+	g.RouterGroup.PATCH(relativePath, func(context *gin.Context) {
 		g.handle(c, context, "Patch")
 	})
 	return g
 }
 
-// PUT is a shortcut for router.Handle("PUT", path, handle).
-func (g *gin) put(relativePath string, c ControllerInterface) *gin {
-	g.rgroup.PUT(relativePath, func(context *ggin.Context) {
+// PUT 添加 PUT 路由信息
+//relativePath 网站的相对路径
+//c 中间件控制器
+func (g *ggin) put(relativePath string, c ControllerInterface) *ggin {
+	g.RouterGroup.PUT(relativePath, func(context *gin.Context) {
 		g.handle(c, context, "Put")
 	})
 	return g
 }
 
-// OPTIONS is a shortcut for router.Handle("OPTIONS", path, handle).
-func (g *gin) options(relativePath string, c ControllerInterface) *gin {
-	g.rgroup.OPTIONS(relativePath, func(context *ggin.Context) {
+// OPTIONS 添加 OPTIONS 路由信息
+//relativePath 网站的相对路径
+//c 中间件控制器
+func (g *ggin) options(relativePath string, c ControllerInterface) *ggin {
+	g.RouterGroup.OPTIONS(relativePath, func(context *gin.Context) {
 		g.handle(c, context, "Options")
 	})
 	return g
 }
 
-// HEAD is a shortcut for router.Handle("HEAD", path, handle).
-func (g *gin) head(relativePath string, c ControllerInterface) *gin {
-	g.rgroup.HEAD(relativePath, func(context *ggin.Context) {
+// HEAD 添加 HEAD 路由信息
+//relativePath 网站的相对路径
+//c 中间件控制器
+func (g *ggin) head(relativePath string, c ControllerInterface) *ggin {
+	g.RouterGroup.HEAD(relativePath, func(context *gin.Context) {
 		g.handle(c, context, "Head")
 	})
 	return g
 }
 
-// Any registers a route that matches all the HTTP methods.
+// Any 注册一个匹配所有HTTP方法的路由。
 // GET, POST, PUT, PATCH, HEAD, OPTIONS, DELETE, CONNECT, TRACE.
-func (g *gin) any(relativePath string, c ControllerInterface) *gin {
-	g.rgroup.Any(relativePath, func(context *ggin.Context) {
+//relativePath 网站的相对路径
+//c 控制器方法
+func (g *ggin) any(relativePath string, c ControllerInterface) *ggin {
+	g.RouterGroup.Any(relativePath, func(context *gin.Context) {
 		g.handle(c, context, "Any")
 	})
 	return g
 }
 
-// Static add static resource
-func (g *gin) Static(relativePath string, filePath string) *gin {
-	g.rgroup.StaticFS(relativePath, http.Dir(filePath))
+// Static 添加静态资源路由
+//relativePath 网站的相对路径
+//filePath 文件的路径
+func (g *ggin) Static(relativePath string, filePath string) *ggin {
+	g.RouterGroup.StaticFS(relativePath, http.Dir(filePath))
 	return g
 }

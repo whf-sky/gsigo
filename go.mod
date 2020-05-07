@@ -22,10 +22,11 @@ replace golang.org/x/text => github.com/golang/text v0.3.2
 
 require (
 	github.com/gin-gonic/gin v1.5.0
-	github.com/go-sql-driver/mysql v1.4.1
+	github.com/go-playground/validator/v10 v10.2.0
 	github.com/gomodule/redigo v2.0.0+incompatible
 	github.com/googollee/go-engine.io v1.4.2
 	github.com/googollee/go-socket.io v1.4.2
+	github.com/jinzhu/gorm v1.9.12
 	github.com/sirupsen/logrus v1.4.2
 	github.com/tabalt/gracehttp v1.3.0
 )

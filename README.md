@@ -29,8 +29,8 @@ https://github.com/jinzhu/gorm
 - [CMD应用](#CMD应用)  
 - [数据库](#数据库)
     - [CURD](#CURD)
-        - [事务](#事务)
         - [主从强制切换](#主从强制切换)
+        - [事务](#事务)
         - [Create](#Create)
         - [Delete](#Delete)
         - [Update](#Update)
@@ -38,6 +38,13 @@ https://github.com/jinzhu/gorm
     - [MODEL](#MODEL)
 - [REDIS](#REDIS)
 - [日志](#日志)
+- [工具包](#工具包)
+    - [验证器](#验证器)
+    - [Curl](#Curl)
+    - [ApiResult](#ApiResult)
+    - [一致性hash](#一致性hash)
+    - [登录](#登录)
+    - [接口签名](#接口签名)
 - [环境变量](#环境变量)  
 
 ## 安装
@@ -122,7 +129,7 @@ func init() {
 package main
 
 func main()  {
-    gsigo.Run("./config/.app.ini")
+    gsigo.Run("./config/app.ini")
 }
 ```
 
@@ -578,7 +585,7 @@ gsigo.OnDisconnect(event EventInterface)
 
 ### CMD路由规则
 
-###### 示例
+##### 示例
 
 ```go
 
@@ -590,13 +597,23 @@ import (
 )
 
 func init()  {
-	gsigo.CmdRouter(&cmd.TestCmd{})
+	gsigo.Cmd("test", &cmd.TestCmdController{})
 }
 
 ```
 
+##### 执行
+
 ```go
-gsigo.CmdRouter(cmd CmdInterface) *router
+go run cmd.go  -request_uri=requestUri
+```
+
+##### 路由
+
+###### Cmd
+
+```go
+gsigo.func Cmd(requestUri string, cmd CmdInterface)
 ```
 
 ## WEB应用
@@ -844,23 +861,9 @@ NewDB(gname ...string) *DB
 
 ```go
 func (d *DB) Using(gname ...string) *DB
+
 ```
 
-#### 事务
-
-[gorm 事务 文档](https://gorm.io/docs/transactions.html)
-
-###### 回调函数中使用事务
-
-```go
-func (d *DB) Transaction (fc func(tx *transaction) error) (err error) 
-```
-
-###### 开启事务
-
-```go
-func (d *DB) Begin() *transaction 
-```
 
 #### 主从强制切换
 
@@ -876,12 +879,105 @@ func (d *DB) Master() *DB
 func (d *DB) Slave() *DB 
 ```
 
+
+#### 事务
+
+[gorm 事务 文档](https://gorm.io/docs/transactions.html)
+
+##### 回调函数中使用事务
+
+```go
+func (d *DB) Transaction (fc func(tx *DB) error) (err error)
+```
+
+###### 示例
+
+```go
+db.Transaction(func(tx *DB) error {
+    // do some database operations in the transaction (use 'tx' from this point, not 'db')
+    if err := tx.Create(&Animal{Name: "Giraffe"}).Error; err != nil {
+      // return any error will rollback
+      return err
+    }
+
+    if err := tx.Create(&Animal{Name: "Lion"}).Error; err != nil {
+      return err
+    }
+
+    // return nil will commit
+    return nil
+  })
+```
+
+
+##### 开启事务
+
+```go
+func (d *DB) Begin() *DB
+```
+
+##### 提交事务
+
+```go
+func (d *DB) Commit() *gorm.DB
+```
+
+##### 回滚事务
+
+```go
+func (d *DB) Rollback() *gorm.DB
+```
+
+##### 事务示例
+
+```go
+func CreateAnimals(db *DB) error {
+  // Note the use of tx as the database handle once you are within a transaction
+  tx := db.Begin()
+  defer func() {
+    if r := recover(); r != nil {
+      tx.Rollback()
+    }
+  }()
+
+  if err := tx.Error; err != nil {
+    return err
+  }
+
+  if err := tx.Create(&Animal{Name: "Giraffe"}).Error; err != nil {
+     tx.Rollback()
+     return err
+  }
+
+  if err := tx.Create(&Animal{Name: "Lion"}).Error; err != nil {
+     tx.Rollback()
+     return err
+  }
+
+  return tx.Commit().Error
+}
+```
+
 #### Create
 
 [gorm Create 文档](https://gorm.io/docs/create.html)
 
+##### 方法
 
-###### 示例
+```go
+func (d *DB) Create(value interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) (*gorm.DB, error) 
+```
+
+##### 别名
+
+```go
+func (d *DB) Insert(value interface{}, funcs ...func(db *gorm.DB) *gorm.DB )  (*gorm.DB, error) 
+```
+
+[error 参见文档](https://github.com/go-playground/validator)
+
+
+##### 示例
 
 ```go
 type User struct {
@@ -898,20 +994,17 @@ db.Create(&user)
 
 ```
 
-###### 插入数据
-
-```go
-func (d *DB) Create(value interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
-
-//Create别名
-func (d *DB) Insert(value interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
-```
-
 #### Delete
 
 [gorm Delete 文档](https://gorm.io/docs/delete.html)
 
-###### 示例
+##### 方法
+
+```go
+func (d *DB) Delete(value interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB
+```
+
+##### 示例
 
 ```go
 type User struct {
@@ -936,17 +1029,35 @@ db.Delete(&email,func(db *gorm.DB) *gorm.DB {
 
 ```
 
-###### 删除数据
-
-```go
-func (d *DB) Delete(value interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
-```
-
 #### Update
 
 [gorm Update 文档](https://gorm.io/docs/update.html)
 
-###### 示例
+
+##### 改变单个字段
+
+```go
+func (d *DB) Update(model interface{}, attrs []interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
+```
+
+##### 修改多个字段
+
+```go
+func (d *DB) Updates(model interface{}, values interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
+```
+
+##### 修改列数据
+
+```go
+func (d *DB) UpdateColumn(model interface{}, attrs []interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
+```
+
+##### 修改多列数据
+
+```go
+func (d *DB) UpdateColumns(model interface{}, values interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB```
+
+##### 示例
 
 ```go
 type User struct {
@@ -987,30 +1098,52 @@ db.Update(User{Name: "", Age: 0, Actived: false}, func(db *gorm.DB) *gorm.DB {
 })
 ```
 
-###### 改变单个字段
-
-```go
-func (d *DB) Update(attrs []interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
-```
-
-###### 修改多个字段
-
-```go
-func (d *DB) Updates(values interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
-```
-
-###### 修改列数据
-
-```go
-func (d *DB) UpdateColumn(attrs []interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
-```
-
 #### Query
 
 [gorm Query 文档](https://gorm.io/docs/query.html)
 
+##### 查询第一条数据，按主键正序排序
+```go
+func (d *DB) First(out interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
+```
 
-###### 示例
+##### 获取一条记录，没有指定的顺序
+
+```go
+func (d *DB) Take(out interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
+```
+
+##### 获取最后一条数据，按照主键倒叙排序
+```go
+func (d *DB) Last(out interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
+```
+
+##### 获取多条数据
+```go
+func (d *DB) Find(out interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
+```
+
+##### 获取第一个匹配的记录，或者在给定条件下初始化一个新记录(只适用于结构，映射条件)
+```go
+func (d *DB) FirstOrInit(out interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
+```
+
+##### 获取第一个匹配的记录，或者在给定的条件下创建一个新的记录(只适用于struct, map条件)
+```go
+func (d *DB) FirstOrCreate(out interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
+```
+
+##### 获取一个模型有多少条记录
+```go
+func (d *DB) Count(value interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
+```
+
+##### 从模型中查询单个列作为映射，如果您想要查询多个列，则应该使用Scan
+```go
+func (d *DB) Pluck(column string, value interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
+```
+
+##### 示例
 
 ```go
 type User struct {
@@ -1072,73 +1205,32 @@ db.Find(&users, func(db *gorm.DB) *gorm.DB {
 //// SELECT * FROM users WHERE created_at BETWEEN '2000-01-01 00:00:00' AND '2000-01-08 00:00:00';
 
 ```
-
-###### 查询第一条数据，按主键正序排序
-```go
-func (d *DB) First(out interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
-```
-
-###### 获取一条记录，没有指定的顺序
-
-```go
-func (d *DB) Take(out interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
-```
-
-###### 获取最后一条数据，按照主键倒叙排序
-```go
-func (d *DB) Last(out interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
-```
-
-###### 获取多条数据
-```go
-func (d *DB) Find(out interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
-```
-
-###### 获取第一个匹配的记录，或者在给定条件下初始化一个新记录(只适用于结构，映射条件)
-```go
-func (d *DB) FirstOrInit(out interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
-```
-
-###### 获取第一个匹配的记录，或者在给定的条件下创建一个新的记录(只适用于struct, map条件)
-```go
-func (d *DB) FirstOrCreate(out interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
-```
-
-###### 获取一个模型有多少条记录
-```go
-func (d *DB) Count(value interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
-```
-
-###### 从模型中查询单个列作为映射，如果您想要查询多个列，则应该使用Scan
-```go
-func (d *DB) Pluck(column string, value interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
-```
 #### 原生sql
 
 [gorm raw 文档](https://gorm.io/docs/query.html)
 
-###### 将结果扫描到另一个结构中。
+##### 将结果扫描到另一个结构中。
 
 ```go
 func (d *DB) Scan(dest interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB
 ```
 
-###### 运行原始SQL,单条查询，它不能与其他方法链接
+##### 运行原始SQL,单条查询，它不能与其他方法链接
 ```go
 func (d *DB) Row(funcs ...func(db *gorm.DB) *gorm.DB ) *sql.Row
 ```
 
-###### 运行原始SQL,多条查询，它不能与其他方法链接
+##### 运行原始SQL,多条查询，它不能与其他方法链接
 ```go
 func (d *DB) Rows(funcs ...func(db *gorm.DB) *gorm.DB ) (*sql.Rows, error)
 ```
 
-###### 运行原始SQL,将结果扫描到另一个结构中。
+##### 运行原始SQL,将结果扫描到另一个结构中。
 ```go
 func (d *DB) Raw(sql string, values ...interface{}) *gorm.DB
 ```
 
-###### 运行原始SQL,执行影响操作的SQL
+##### 运行原始SQL,执行影响操作的SQL
 ```go
 func (d *DB) Exec(sql string, values ...interface{}) *gorm.DB
 ```
@@ -1162,64 +1254,64 @@ func (w *Words) BeforeCreate(scope *gorm.Scope) error {
 
 > [参考redis](https://github.com/gomodule/redigo/redis)
 
-###### 代码实现了读写分离操作
+##### 代码实现了读写分离操作
 
-######  实例redis
+#####  实例redis
 
 ```go
 func NewRedis(gname ...string) *Redis
 ```
 
-###### 使用的redis配置的组，如不使用`redis.NewRedis`需自己实例化使用此方法
+##### 使用的redis配置的组，如不使用`redis.NewRedis`需自己实例化使用此方法
 
 ```go
 func (d *Redis) Using(gname ...string) *Redis 
 ```
 
-###### 强制切换到主库
+##### 强制切换到主库
 
 ```go
 func (r *Redis) Master() *Redis
 ```
 
-###### 强制切换到从库
+##### 强制切换到从库
 
 ```go
 func (r *Redis) Slave() *Redis{
 ```
 
-###### 执行命令
+##### 执行命令
 
 ```go
 func (r *Redis) Do(cmd string, args ...interface{}) (reply interface{}, err error)
 ```
 
-###### 将命令写入客户机的输出缓冲区
+##### 将命令写入客户机的输出缓冲区
 
 ```go
 func (r *Redis) Send(commandName string, args ...interface{}) error
 ```
 
-###### 将输出缓冲区刷新到Redis服务器。
+##### 将输出缓冲区刷新到Redis服务器。
 
 ```go
 func (r *Redis) Flush() error
 ```
 
-###### 接收来自Redis服务器的单个回复
+##### 接收来自Redis服务器的单个回复
 
 ```go
 func (r *Redis) Receive() (reply interface{}, err error) 
 ```
 
 
-###### 发布订阅
+##### 发布订阅
 
 ```go
 func (r *Redis) PubSub() redis.PubSubConn
 ```
 
-###### 返回一个新的脚本对象
+##### 返回一个新的脚本对象
 
 ```go
 func (r *Redis) Script(keyCount int, src string) *script
@@ -1233,15 +1325,509 @@ func (r *Redis) Script(keyCount int, src string) *script
 gsigo.Log.
 ```
 
-###### 示例
+##### 示例
 
 ```go
 gsigo.Log.Trace("this is test!")
 ```
 
+## 工具包
+
+### 验证器
+
+[参见文档](https://github.com/go-playground/validator)
+
+### Curl
+
+#### 示例
+
+```go
+package main
+
+import "github.com/whf-sky/gsigo/utils"
+
+
+func main()  {
+    utils.NewCurl("https://www.baidu.com").Get()
+}
+
+```
+
+#### 方法
+
+##### 实例化
+
+###### NewCurl
+
+```go
+func NewCurl(url string) *Curl
+```
+
+##### 选项 
+
+###### Url
+
+```go
+func (c *Curl) Url(url string) *Curl
+```
+
+###### Query
+
+```go
+func  (c *Curl) Query(query map[string]string) *Curl 
+```
+
+###### SetQuery
+
+```go
+func (c *Curl) SetQuery(name string, value string) *Curl 
+```
+
+###### Body
+
+```go
+func (c *Curl) Body(body io.Reader) *Curl 
+```
+
+###### Cookie
+
+```go
+func (c *Curl) Cookie(cookie map[string]string) *Curl
+```
+
+###### SetCookie
+
+```go
+func (c *Curl) SetCookie(name string, value string) *Curl
+```
+
+###### Header
+
+```go
+func (c *Curl) Header(header map[string]string) *Curl 
+```
+
+###### SetHeader
+
+```go
+func (c *Curl) SetHeader(name string, value string) *Curl 
+```
+
+###### SetPostForm
+
+```go
+func (c *Curl) SetPostForm() *Curl
+```
+
+###### GetBody
+
+```go
+func (c *Curl) GetBody(method string) ([]byte, error) 
+```
+
+###### GetHeader
+
+```go
+func (c *Curl) GetHeader() http.Header
+```
+
+##### 请求方法
+
+###### Get
+
+```go
+func (c *Curl) Get() ([]byte, error)
+```
+
+###### Post
+
+```go
+func (c *Curl) Post() ([]byte, error)
+```
+###### Options
+
+```go
+func (c *Curl) Options() ([]byte, error)
+```
+
+###### Head
+
+```go
+func (c *Curl) Head() ([]byte, error)
+```
+
+###### Put
+
+```go
+func (c *Curl) Put() ([]byte, error)
+```
+
+###### Delete
+
+```go
+func (c *Curl) Delete() ([]byte, error)
+```
+
+###### Patch
+
+```go
+func (c *Curl) Patch() ([]byte, error)
+```
+
+###### Connect
+
+```go
+func (c *Curl) Connect() ([]byte, error)
+```
+
+
+### ApiResult
+
+#### 示例
+
+```go
+package main
+
+import "github.com/whf-sky/gsigo/utils"
+
+
+func main()  {
+    utils.NewApiResult().SetError("类型错误", 100)
+}
+
+```
+
+#### 方法
+
+###### 实例化
+
+```go
+func NewApiResult() *ApiResult
+```
+
+###### 设置状态码
+
+```go
+func (a *ApiResult) SetCode(code int) map[string]interface{}
+```
+
+###### 设置成功信息
+
+```go
+func (a *ApiResult) SetSuccess(data interface{}) map[string]interface{}
+```
+
+###### 设置错误信息
+
+```go
+func (a *ApiResult) SetError(msg string, code int) map[string]interface{} 
+```
+
+### 一致性hash
+
+#### 示例
+
+```go
+package main
+
+import (
+	"fmt"
+	"github.com/whf-sky/gsigo/utils"
+)
+
+func main(){
+
+	hash := utils.NewConsistentHashing(10)
+	//添加节点
+	hash.AddNode("test1")
+	hash.AddNode("test2")
+
+	//获取落点
+	fmt.Println(hash.GetLocation("我在哪"))
+	fmt.Println(hash.GetLocation("我是谁"))
+    //删除落点
+	hash.DeleteNode("test1")
+}
+```
+
+
+#### 方法
+
+###### 实例化
+
+```go
+func NewConsistentHashing(virtualNodeNum int) *ConsistentHashing
+```
+
+###### SetVirtualNodeNum
+
+```go
+//设置虚拟节点数量
+//num 节点数
+func (c *ConsistentHashing) SetVirtualNodeNum (num int) 
+```
+
+
+###### AddNode
+
+```go
+//添加节点
+//node 节点
+func (c *ConsistentHashing) AddNode (node string) 
+```
+
+###### GetLocation
+
+```go
+//寻找字符串所在位置
+//str 字符串
+func (c *ConsistentHashing) GetLocation (str string) string
+```
+
+###### DeleteNode
+
+```go
+//删除一个节点
+//node 节点
+func (c *ConsistentHashing) DeleteNode (node string) 
+```
+
+
+### 登录
+
+#### 示例
+
+```go
+package index
+
+import (
+	"github.com/whf-sky/gsigo"
+	"github.com/whf-sky/gsigo/utils"
+)
+
+type IndexController struct {
+	gsigo.Controller
+}
+
+func (this *IndexController) Get() {
+	login := utils.NewLogin(this.Ctx)
+	login.SetExpire(0)
+	login.SetName("login")
+	login.SetVerifyExpire(false)
+	login.SetValue("1")
+
+	val, err := login.GetValue()
+	if err != nil {
+		this.Ctx.String(200, "%s" , err.Error())
+		return
+	}
+	this.Ctx.String(200,  "%s", val)
+}
+```
+
+#### 方法
+
+###### 实例化
+
+```go
+func NewLogin(ctx *gin.Context) *Login
+```
+
+###### SetCtx
+
+```go
+func (l *Login) SetCtx(ctx *gin.Context) *Login
+```
+
+
+###### SetVerifyExpire
+
+```go
+//设置cookie 的有效期。
+//verify true:验证/false:不验证
+//默认验证
+func (l *Login) SetVerifyExpire(verify bool) *Login
+```
+
+###### SetExpire
+
+```go
+//设置cookie 的有时间。
+//expire 秒
+func (l *Login) SetExpire(maxAge int) *Login
+```
+
+###### SetPath
+
+```go
+//设置cookie路径。
+func (l *Login) SetPath(path string) *Login
+```
+
+###### SetDomain
+
+```go
+//设置cookie域名
+func (l *Login) SetDomain(domain string) *Login
+```
+
+###### Delete
+
+```go
+//删除cookie
+func (l *Login) Delete() *Login
+```
+###### SetValue
+
+```go
+//设置cookie值
+//使用此方法会最终生成cookie，放在最后调用
+func (l *Login) SetValue(value string) *Login
+```
+###### GetValue
+
+```go
+//获取cookie
+func  (l *Login) GetValue() (string, error)
+```
+
+### 接口签名
+
+#### 验证示例
+
+```go
+package index
+
+import (
+	"github.com/whf-sky/gsigo"
+	"github.com/whf-sky/gsigo/utils"
+)
+
+type IndexController struct {
+	gsigo.Controller
+}
+
+func (this *IndexController) Get() {
+	sign := utils.NewSign()
+	sign.SetSecret("!@!@#%^&&*(())hhjkk")
+	sign.SetApiKey("saas-1")
+	sign.SetCtx(this.Ctx)
+	sign.SetOpenExpired(true)
+	sign.SetExpired(1000)
+	err := sign.Verify("我是谁？")
+	if err != nil {
+		this.Ctx.String(200, "%s" , err.Error())
+		return
+	}
+	this.Ctx.String(200, "%s" , "验证成功")
+}
+```
+#### 签名生成示例
+
+```go
+package index
+
+import (
+	"github.com/whf-sky/gsigo"
+	"github.com/whf-sky/gsigo/utils"
+)
+
+type IndexController struct {
+	gsigo.Controller
+}
+
+func (this *IndexController) Get() {
+    sign := utils.NewSign()
+    sign.SetSecret("!@!@#%^&&*(())hhjkk")
+    apikey := "saas-1"
+    nonce := fmt.Sprintf("%f", rand.Float64())
+    timestamp := fmt.Sprintf("%d",time.Now().Unix())
+    signStr := sign.GenerateSignature(apikey, nonce, timestamp, "我是谁？")
+
+    fmt.Println("HTTP_API_KEY:",apikey)
+    fmt.Println("HTTP_API_NONCE:",nonce)
+    fmt.Println("HTTP_API_TIMESTAMP:",timestamp)
+    fmt.Println("HTTP_API_SIGNATURE:",signStr)
+}
+```
+#### 头信息
+
+- HTTP_API_KEY
+
+###### 随机字符串你
+
+- HTTP_API_NONCE
+
+###### 时间戳
+
+- HTTP_API_TIMESTAMP
+
+###### 签名
+
+- HTTP_API_SIGNATURE
+
+#### 方法
+
+###### 实例化
+
+```go
+func NewSign() *Sign
+```
+
+###### SetCtx
+
+```go
+//设置 gin Context
+func (s *Sign) SetCtx(ctx *gin.Context) *Sign
+```
+
+
+###### SetSecret
+
+```go
+//设置秘钥
+func (s *Sign) SetSecret(secret string) *Sign
+```
+
+###### SetApiKey
+
+```go
+//设置应用key
+func (s *Sign) SetApiKey(apiKey string) *Sign
+```
+
+###### SetExpired
+
+```go
+//设置签名有效期
+//expired 秒
+func (s *Sign) SetExpired(expired int) *Sign
+```
+
+###### SetOpenExpired
+
+```go
+//设置签名有效期
+func (s *Sign) SetOpenExpired(open bool) *Sign
+```
+
+###### Verify
+
+```go
+//验证签名
+func (s *Sign) Verify(str string) error
+```
+
+###### GenerateSignature
+
+```go
+//生成签名
+func (s *Sign) GenerateSignature(apikey, nonce, timestamp, str string) string
+```
+
 ## 环境变量
 
-###### 环境变量的使用示例
+##### 环境变量的使用示例
 
 
 ```sh

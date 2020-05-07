@@ -35,7 +35,7 @@ type SlaveCnf struct {
 }
 
 func init() {
-	err := config.NewIni().Read( &configs, "./config/"+gsigo.ENV+"/redis.ini")
+	err := config.NewIni().Read( &configs, "./configs/"+gsigo.ENV+"/redis.ini")
 	if err != nil {
 		panic(err)
 	}

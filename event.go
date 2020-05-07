@@ -2,29 +2,29 @@ package gsigo
 
 import (
 	"errors"
-	gsocketio "github.com/googollee/go-socket.io"
+	"github.com/googollee/go-socket.io"
 )
 
 type Event struct {
-	// is ack
+	//是否应答
 	Ack bool
 	//socketio connect
-	Conn gsocketio.Conn
-	//socketio event type
+	Conn socketio.Conn
+	//socketio 事件类型
 	EventType string
-
-	//socketio message
+	//socketio 消息
 	message string
-	//socketio namespace
+	//socketio 命名空间
 	namespace string
-	//socketio error
+	//socketio 错误信息
 	error error
-	//socketio ack message
+	//socketio 应答消息
 	ackMsg string
 }
 
+//定义了一些基本的socketio请求处理程序操作
 type EventInterface interface {
-	Init(eventType string, Conn gsocketio.Conn, Message string, Err error)
+	Init(eventType string, Conn socketio.Conn, Message string, Err error)
 	Prepare()
 	Execute()
 	Finish()
@@ -34,7 +34,8 @@ type EventInterface interface {
 	GetAckMsg() string
 }
 
-func (e *Event)Init(eventType string, conn gsocketio.Conn, message string, err error)  {
+//初始化事件操作的默认值。
+func (e *Event)Init(eventType string, conn socketio.Conn, message string, err error)  {
 	e.Conn = conn
 	e.EventType = eventType
 	e.message = message
@@ -42,89 +43,97 @@ func (e *Event)Init(eventType string, conn gsocketio.Conn, message string, err e
 	e.ackMsg = ""
 }
 
-//SetUser is binding user
+//SetUser 绑定用户信息
+//uid 用户标识
+//绑的的是：用户与链接关系、链接与用户关系
 func (e *Event) SetUser(uid string)  {
 	cid := e.Conn.ID()
-	// get write lock
-	Socketio.lock.Lock()
-	defer Socketio.lock.Unlock()
-	if _,ok := Socketio.cids[cid];!ok{
-		Socketio.cids[cid] = uid
+	//获取写锁
+	Gsocketio.lock.Lock()
+	//写锁解锁
+	defer Gsocketio.lock.Unlock()
+	//连接编号与用户编号关系绑定
+	if _,ok := Gsocketio.cids[cid];!ok{
+		Gsocketio.cids[cid] = uid
 	}
-	if _,ok := Socketio.users[uid];!ok{
-		Socketio.users[uid] = map[string]int{}
+	//用户编号与连接关系绑定
+	if _,ok := Gsocketio.users[uid];!ok{
+		Gsocketio.users[uid] = map[string]int{}
 	}
-	if _,ok := Socketio.users[uid][cid];!ok{
-		Socketio.users[uid][cid] = len(Socketio.users[uid])+1
+	if _,ok := Gsocketio.users[uid][cid];!ok{
+		Gsocketio.users[uid][cid] = len(Gsocketio.users[uid])+1
 	}
 }
 
-//GetUser is get user by connect id
+//GetUser 根据链接编号获取用户
 func (e *Event) GetUser() string {
-	// get read lock
-	Socketio.lock.RLock()
-	defer Socketio.lock.RUnlock()
-
-	if val,ok := Socketio.cids[e.Conn.ID()];ok {
+	//获取读锁
+	Gsocketio.lock.RLock()
+	//读锁解锁
+	defer Gsocketio.lock.RUnlock()
+	//根据连接获取用户
+	if val,ok := Gsocketio.cids[e.Conn.ID()];ok {
 		return val
 	}
 	return ""
 }
 
-//GetCidsByUser get connect ids by user
+//GetCidsByUser 根据用户获取连接信息
 func (e *Event) GetCidsByUser(uid string) map[string]int {
-	// get read lock
-	Socketio.lock.RLock()
-	defer Socketio.lock.RUnlock()
-	if val,ok := Socketio.users[uid];ok {
+	//获取读锁
+	Gsocketio.lock.RLock()
+	//读锁解锁
+	defer Gsocketio.lock.RUnlock()
+	//根据用户获取多个连接信息
+	if val,ok := Gsocketio.users[uid];ok {
 		return val
 	}
 	return nil
 }
 
-//IsAck is ack
+//IsAck 获取是否应答信息
 func (e *Event) IsAck() bool {
 	return e.Ack
 }
 
-//GetMessage get event message
+//GetMessage 获取事件信息
 func (e *Event) GetMessage() string {
 	return e.message
 }
 
-//SetAckMsg set socketio 'event' event ack msg
+//SetAckMsg 设置事件的应答信息，前提是开启了应答机制
 func (e *Event) SetAckMsg(msg string) {
 	e.ackMsg = msg
 }
 
-//GetAckMsg get socketio 'event' event ack msg
+//GetAckMsg 获取应答信息
 func (e *Event) GetAckMsg() string{
 	return e.ackMsg
 }
 
-//GetNamespace get socketio namespace
+//GetNamespace 获取命名空间
 func (e *Event) GetNamespace() string{
 	return e.namespace
 }
 
-//SetError set socketio error
+//SetError 设置错误信息
 func (e *Event) SetError(text string) {
 	e.error = errors.New(text)
 }
 
-//GetError is get socketio event error
+//GetError 获取错误信息
 func (e *Event) GetError() error {
 	return e.error
 }
 
-// Prepare runs after Init before request function execution.
+// Prepare 在请求函数执行之前，在Init之后运行。
 func (e *Event) Prepare() {}
 
 
-// Execute runs event function.
+// Execute 件事的执行函数
 func (e *Event) Execute() {
 	e.Conn.Emit("error", "Event Not Allowed")
 }
 
-// Finish runs after request function execution.
+// Finish 在请求函数执行后运行。
 func (e *Event) Finish() {}

@@ -1,6 +1,7 @@
 package orm
 
 import (
+	"github.com/go-playground/validator/v10"
 	"database/sql"
 	"github.com/jinzhu/gorm"
 )
@@ -12,7 +13,10 @@ const (
 )
 
 func NewDB(gname ...string) *DB  {
-	return (&DB{}).Using(gname...)
+	return (&DB{
+		trans:		false,
+		validate:	validator.New(),
+	}).Using(gname...)
 }
 
 type DB struct {
@@ -21,6 +25,8 @@ type DB struct {
 	gnames 		[]string
 	mode 		int
 	curSlave 	int
+	trans 		bool
+	validate   *validator.Validate
 }
 
 //open database group
@@ -28,20 +34,6 @@ func (d *DB) Using(gname ...string) *DB {
 	d.gnames = gname
 	d.groups = using(gname...)
 	return d
-}
-
-// Transaction start a transaction as a block,
-// return error will rollback, otherwise to commit.
-func (d *DB) Transaction (fc func(tx *transaction) error) (err error) {
-	return d.Db(ModeMaster).Transaction(func(tx *gorm.DB) error {
-		return fc(&transaction{tx:tx})
-	})
-}
-
-// Begin begins a transaction
-func (d *DB) Begin() *transaction {
-	tx := d.Db(ModeMaster).Begin()
-	return &transaction{tx:tx}
 }
 
 //curd for  master database connect
@@ -56,13 +48,54 @@ func (d *DB) Slave() *DB {
 	return d
 }
 
-// Create insert the value into database
-func (d *DB) Create(value interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB {
-	return d.Db(ModeMaster, funcs...).Create(value)
+// Transaction start a transaction as a block,
+// return error will rollback, otherwise to commit.
+func (d *DB) Transaction (fc func(tx *DB) error) (err error) {
+	panicked := true
+	tx := d.Begin()
+	defer func() {
+		// Make sure to rollback when panic, Block error or Commit error
+		if panicked || err != nil {
+			tx.Rollback()
+		}
+	}()
+	err = fc(tx)
+	if err == nil {
+		err = tx.Commit().Error
+	}
+	panicked = false
+	return
+}
+
+// Begin begins a transaction
+func (d *DB) Begin() *DB {
+	d.Db(ModeMaster)
+	c := d.clone()
+	c.db = c.db.Begin()
+	return c
+}
+
+// Commit commit a transaction
+func (d *DB) Commit() *gorm.DB {
+	return d.Db(ModeMaster).Commit()
+}
+
+// Rollback rollback a transaction
+func (d *DB) Rollback() *gorm.DB {
+	return d.Db(ModeMaster).Rollback()
 }
 
 // Create insert the value into database
-func (d *DB) Insert(value interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB {
+func (d *DB) Create(value interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) (*gorm.DB, error) {
+	err := d.validate.Struct(value)
+	if err != nil {
+		return nil, err
+	}
+	return d.Db(ModeMaster, funcs...).Create(value), nil
+}
+
+// Create insert the value into database
+func (d *DB) Insert(value interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) (*gorm.DB, error) {
 	return d.Create(value, funcs...)
 }
 
@@ -74,18 +107,23 @@ func (d *DB) Delete(value interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *go
 
 // Update update attributes with callbacks, refer: https://jinzhu.github.io/gorm/crud.html#update
 // WARNING when update with struct, GORM will not update fields that with zero value
-func (d *DB) Update(attrs []interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB {
-	return d.Db(ModeMaster, funcs...).Update(attrs...)
+func (d *DB) Update(model interface{}, attrs []interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB {
+	return d.Db(ModeMaster, funcs...).Model(model).Update(attrs...)
 }
 
 // Updates update attributes with callbacks, refer: https://jinzhu.github.io/gorm/crud.html#update
-func (d *DB) Updates(values interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB {
-	return d.Db(ModeMaster, funcs...).Updates(values)
+func (d *DB) Updates(model interface{}, values interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB {
+	return d.Db(ModeMaster, funcs...).Model(model).Updates(values)
 }
 
 // UpdateColumn update attributes without callbacks, refer: https://jinzhu.github.io/gorm/crud.html#update
-func (d *DB) UpdateColumn(attrs []interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB {
-	return d.Db(ModeMaster, funcs...).UpdateColumn(attrs...)
+func (d *DB) UpdateColumn(model interface{}, attrs []interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB {
+	return d.Db(ModeMaster, funcs...).Model(model).UpdateColumn(attrs...)
+}
+
+// UpdateColumn update attributes without callbacks, refer: https://jinzhu.github.io/gorm/crud.html#update
+func (d *DB) UpdateColumns(model interface{}, values interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB {
+	return d.Db(ModeMaster, funcs...).Model(model).UpdateColumns(values)
 }
 
 // First find first record that match given conditions, order by primary key
@@ -149,7 +187,7 @@ func (d *DB) Scan(dest interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.
 // Raw use raw sql as conditions, won't run it unless invoked by other methods
 //    db.Raw("SELECT name, age FROM users WHERE name = ?", 3).Scan(&result)
 func (d *DB) Raw(sql string, values ...interface{}) *gorm.DB {
-	return d.Db(ModeSlave).Raw(sql)
+	return d.Db(ModeSlave).Raw(sql, values...)
 }
 
 // Exec execute raw sql
@@ -161,42 +199,34 @@ func (d *DB) Exec(sql string, values ...interface{}) *gorm.DB {
 // driver-specific data source name for database group, usually consisting of at least a
 // database name and connection information.
 func (d *DB) Db(mode int, funcs ...func(db *gorm.DB) *gorm.DB) *gorm.DB {
+	//当是事务的时候直接返回
+	if d.trans {
+		return d.db
+	}
+	//还原mode为默认值
 	defer func() {
 		d.mode = ModeDefault
 	}()
-	//set mode
+	//当DB mode 不等于默认值时对BD mode进行修改
 	if d.mode != ModeDefault {
 		mode = d.mode
 	}
-
-	//run functions
-	runFuncs := func() *gorm.DB {
-		if len(funcs) > 0 {
-			for _, fun := range funcs  {
-				d.db = fun(d.db)
-			}
-		}
-		return d.db
-	}
-
-	//get group
+	//获取组信息
 	group, ok := d.groups[d.gnames[0]]
 	if !ok {
 		panic("this dao without using group")
 	}
-
-	//get gorm Db without set read write database
+	//当数据连接没有配置主库的时候使用默认数据库连接
 	if group.Master == nil {
 		d.db = group.Db
-		return runFuncs()
+		return d.callback(funcs)
 	}
-	//get master gorm Db
+	//当存在主库配置并且mode值为主库时使用主数据库连接
 	if mode == ModeMaster {
 		d.db = group.Master
-		return runFuncs()
+		return d.callback(funcs)
 	}
-
-	//get slave  gorm Db
+	//使用从库的数据连接
 	sCnt := len(group.Slave)
 	if d.curSlave > sCnt-1 {
 		d.curSlave = 0
@@ -204,5 +234,28 @@ func (d *DB) Db(mode int, funcs ...func(db *gorm.DB) *gorm.DB) *gorm.DB {
 	d.db = group.Slave[d.curSlave]
 	d.curSlave++
 
-	return runFuncs()
+	return d.callback(funcs)
 }
+
+//clone a DB
+func  (d *DB)  clone() *DB {
+	return &DB{
+		db:       	d.db,
+		groups:   	d.groups,
+		gnames:   	d.gnames,
+		mode:     	d.mode,
+		curSlave: 	d.curSlave,
+		trans:		true,
+	}
+}
+
+//数据库操作的回调函数
+func (d *DB) callback(funcs []func(db *gorm.DB) *gorm.DB) *gorm.DB {
+	if len(funcs) > 0 {
+		for _, fun := range funcs  {
+			d.db = fun(d.db)
+		}
+	}
+	return d.db
+}
+

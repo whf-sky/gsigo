@@ -1,10 +1,5 @@
 package orm
 
-import (
-	"github.com/whf-sky/gsigo"
-	"github.com/whf-sky/gsigo/config"
-)
-
 var configs map[string]dbGroupsCnf
 
 type dbGroupsCnf struct {
@@ -31,8 +26,8 @@ type SlaveCnf struct {
 }
 
 func init() {
-	err := config.NewIni().Read( &configs, "./config/"+gsigo.ENV+"/database.ini")
-	if err != nil {
-		panic(err)
-	}
+	//err := config.NewIni().Read( &configs, "./configs/"+gsigo.ENV+"/database.ini")
+	//if err != nil {
+	//	panic(err)
+	//}
 }

@@ -1,25 +1,26 @@
 package gsigo
 
 import (
-	ggin "github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin"
 	"net/http"
 )
 
-// Controller defines some basic http request handler operations, such as
-// http context, template and view, session and xsrf.
+// Controller 定义了一些基本的http请求处理程序操作，例如
+// http上下文，模板和视图，会话和xsrf。
 type Controller struct {
-	// context data
-	Ctx  *ggin.Context
-
-	// route controller info
+	//gin Context
+	Ctx  *gin.Context
+	//控制器名称
 	controllerName string
+	//操作名称
 	actionName     string
+	//组名
 	groupName	   string
 }
 
-// ControllerInterface is an interface to uniform all controller handler.
+// ControllerInterface是一个统一所有控制器处理程序的接口。
 type ControllerInterface interface {
-	Init(ct *ggin.Context, controllerName, actionName string)
+	Init(ct *gin.Context, controllerName, actionName string)
 	Prepare()
 	Get()
 	Post()
@@ -34,74 +35,74 @@ type ControllerInterface interface {
 	Use()
 }
 
-// Init generates default values of controller operations.
-func (c *Controller) Init(ctx *ggin.Context, controllerName, actionName string) {
+//Init 初始化控制器操作的默认值。
+func (c *Controller) Init(ctx *gin.Context, controllerName, actionName string) {
 	c.controllerName = controllerName
 	c.actionName = actionName
 	c.Ctx = ctx
 }
 
-// Prepare runs after Init before request function execution.
+// Prepare 在请求函数执行之前，在Init之后运行。
 func (c *Controller) Prepare() {}
 
-// Finish runs after request function execution.
+// Finish 在请求函数执行后运行。
 func (c *Controller) Finish() {}
 
-// Get adds a request function to handle GET request.
+// Get 添加一个请求函数来处理GET请求。
 func (c *Controller) Get() {
 	http.Error(c.Ctx.Writer, "Method Not Allowed", http.StatusMethodNotAllowed)
 }
 
-// Post adds a request function to handle POST request.
+// Post 添加一个请求函数来处理POST请求。
 func (c *Controller) Post() {
 	http.Error(c.Ctx.Writer, "Method Not Allowed", http.StatusMethodNotAllowed)
 }
 
-// Delete adds a request function to handle DELETE request.
+// Delete 添加一个请求函数来处理DELETE请求
 func (c *Controller) Delete() {
 	http.Error(c.Ctx.Writer, "Method Not Allowed", http.StatusMethodNotAllowed)
 }
 
-// Put adds a request function to handle PUT request.
+// Put  添加一个请求函数来处理PUT请求
 func (c *Controller) Put() {
 	http.Error(c.Ctx.Writer, "Method Not Allowed", http.StatusMethodNotAllowed)
 }
 
-// Head adds a request function to handle HEAD request.
+// Put  添加一个请求函数来处理 HEAD 请求
 func (c *Controller) Head() {
 	http.Error(c.Ctx.Writer, "Method Not Allowed", http.StatusMethodNotAllowed)
 }
 
-// Patch adds a request function to handle PATCH request.
+// Patch  添加一个请求函数来处理 PATCH 请求
 func (c *Controller) Patch() {
 	http.Error(c.Ctx.Writer, "Method Not Allowed", http.StatusMethodNotAllowed)
 }
 
-// Options adds a request function to handle OPTIONS request.
+// Options  添加一个请求函数来处理 OPTIONS 请求
 func (c *Controller) Options() {
 	http.Error(c.Ctx.Writer, "Method Not Allowed", http.StatusMethodNotAllowed)
 }
 
-// Any adds a request function to handle all request.
+// Any  添加一个请求函数来处理所有请求
 func (c *Controller) Any() {}
 
-// Group adds a request function to handle group request.
+// Group 添加一个请求函数来处理 Group 请求。
 func (c *Controller) Group() {}
 
-// Use adds middleware to the group.
+// Use 添加一个中间件。
 func (c *Controller) Use() {}
 
-//GetGroup gets the executing group name.
+//GetGroup 获取执行的组名称。
 func (c *Controller) GetGroup() string {
 	return c.groupName
 }
 
-//GetController gets the executing controller name.
+//GetController 获取执行的控制器名称。
 func (c *Controller) GetController() string {
 	return c.controllerName
 }
 
-//GetAction gets the executing action name.
+//GetAction 获取执行的操作名称。
 func (c *Controller) GetAction() string {
 	return c.actionName
 }

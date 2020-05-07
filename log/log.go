@@ -5,9 +5,6 @@ import (
 	"github.com/whf-sky/gsigo/log/hooks"
 	"io/ioutil"
 	"log/syslog"
-	"math/rand"
-	"strconv"
-	"time"
 )
 
 //log hooks
@@ -89,12 +86,4 @@ func (l *log) syslogHook(params map[string]string)  {
 	} else {
 		l.logrus.Error(err)
 	}
-}
-
-//GenerateLogid is generate log id
-func GenerateLogid() string {
-	unixNano := time.Now().UnixNano()
-	rand.Seed(unixNano)
-	randNum := rand.Int63n(999)
-	return strconv.FormatInt(unixNano+randNum,16)
 }

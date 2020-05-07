@@ -50,7 +50,7 @@ type LogCnf struct {
 	Params map[string]string `ini:"params"`
 }
 
-//loadConfig load ini file config info
+//loadConfig 加载配置信息
 func loadConfig(file ...string) {
 	if len(file) == 0 {
 		Config.APP.Debug = true

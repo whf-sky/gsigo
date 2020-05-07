@@ -2,58 +2,63 @@ package gsigo
 
 import (
 	"flag"
-	ggin "github.com/gin-gonic/gin"
+	"fmt"
+	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"github.com/whf-sky/gsigo/log"
 	"os"
+	"strings"
 )
 
 const (
-	// VERSION represent gsigo gin socketio framework version.
+	//框架版本信息
 	VERSION = "1.0.0"
-	//mode
+
+	//模式: default/gin
+	//socketio+gin
 	ModeDefault = "default"
+	//gin
 	ModeGin = "gin"
+	//cmd
 	ModeCmd = "cmd"
-	ModeInit = "init"
 )
 
 var (
-	// Wsi is an application instance
+	//环境变量
 	ENV string
-	//system yml config
+	//系统配置信息
 	Config gsigoCnf
-	//logrus Logger
+	//logrus 日志记录器
 	Log *logrus.Logger
-	//new socketio
-	Socketio *socketio
-	//new gin
-	Gin *gin
-	//config path
+	//gsocketio 实例
+	Gsocketio *gsocketio
+	//gin 实例
+	Ggin *ggin
+	//配置文件路径
 	ConfigPath string
+	//命令行请求URI
+	CmdRequestUri string
 )
 
-//run gsigo
+//Run 运行
 func Run(file ...string) {
 	loadConfig(file...)
-	loadLog()
+	flagParse(Config.APP.Mode)
+	registerLog()
 	switch Config.APP.Mode {
 	case ModeDefault:
 		defaultRun()
 	case ModeGin:
 		ginRun()
 	case ModeCmd:
-		cmdRun()
-	case ModeInit:
-		//todo 待实现
+		newCmd().run()
 	default:
 		defaultRun()
 	}
 }
 
-//load log
-func loadLog () {
-	//new log
+//load 注册日志差价
+func registerLog () {
 	Log = log.Newlog(
 		Config.Log.Hook,
 		Config.Log.Formatter,
@@ -61,44 +66,53 @@ func loadLog () {
 		Config.APP.Debug)
 }
 
-//defaultRun run socketio, gin server
+//defaultRun 运行socketio和gin 服务
 func defaultRun() {
-	Socketio = newSocketio()
-	go Socketio.serve()
-	defer Socketio.close()
+	Gsocketio = newGsocketio()
+	go Gsocketio.serve()
+	defer Gsocketio.close()
 	ginRun()
 }
 
-//ginRun run gin server
+//ginRun 运行gin服务
 func ginRun () {
-	Gin = newGin()
+	Ggin = newGgin()
 	if Config.APP.Mode == ModeDefault {
-		Gin.Server.GET("/socket.io/*any", ggin.WrapH(Socketio.Server))
-		Gin.Server.POST("/socket.io/*any", ggin.WrapH(Socketio.Server))
+		Ggin.Engine.GET("/socket.io/*any", gin.WrapH(Gsocketio.Server))
+		Ggin.Engine.POST("/socket.io/*any", gin.WrapH(Gsocketio.Server))
 	}
 	addr := Config.APP.Host + ":" + Config.APP.Port
 	if addr == ":" {
 		addr = "0.0.0.0:8080"
 	}
-	Gin.run(addr)
+	Ggin.run(addr)
 }
 
-//cmdRun run cmd server
-func cmdRun() {
-	for _,cmd := range routerObj.cmd {
-		go func() {
-			cmd.Init()
-			cmd.Execute()
-		}()
+//Version 打印版本信息
+func Version () {
+	fmt.Println(VERSION)
+}
+
+//命令行参数中获取变量信息
+//mode 模式 default/gin/cmd
+func flagParse(mode string)  {
+	parse := false
+	if ENV == "" {
+		parse = true
+		flag.StringVar(&ENV, "env", "production","input environment variable")
 	}
-	select {}
+	if mode == ModeCmd {
+		parse = true
+		flag.StringVar(&CmdRequestUri, "request_uri", "","Please input request_uri")
+	}
+	if parse {
+		flag.Parse()
+		ENV = strings.TrimSpace(ENV)
+		CmdRequestUri = strings.TrimSpace(CmdRequestUri)
+	}
 }
 
 func init() {
-	//get environment variable
+	//环境变量中获取环境变量
 	ENV = os.Getenv("GSIGO_ENV")
-	if ENV == "" {
-		flag.StringVar(&ENV, "env", "production","input environment variable")
-		flag.Parse()
-	}
 }
