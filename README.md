@@ -602,12 +602,6 @@ func init()  {
 
 ```
 
-##### 执行
-
-```go
-go run cmd.go  -request_uri=requestUri
-```
-
 ##### 路由
 
 ###### Cmd
@@ -835,6 +829,14 @@ func (this * TestCmd)  Execute(){
 }
 
 ```
+
+##### 执行
+
+```go
+go run cmd.go  -request_uri=requestUri
+```
+
+
 ##### 可定义的方法
 
 - `Execute` 执行方法
@@ -1754,7 +1756,7 @@ func (this *IndexController) Get() {
 
 - HTTP_API_KEY
 
-###### 随机字符串你
+###### 随机字符串
 
 - HTTP_API_NONCE
 

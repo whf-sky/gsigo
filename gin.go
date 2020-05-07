@@ -86,25 +86,25 @@ func (g *ggin) registerRouter() {
 		//注册路由信息
 		for _, request :=  range group  {
 			switch request.method {
-			case "Post":
+			case "POST":
 				g.post(request.relativePath, request.controller)
-			case "Get":
+			case "GET":
 				g.get(request.relativePath, request.controller)
-			case "Delete":
+			case "DELETE":
 				g.delete(request.relativePath, request.controller)
-			case "Put":
+			case "PUT":
 				g.put(request.relativePath, request.controller)
-			case "Head":
+			case "HEAD":
 				g.head(request.relativePath, request.controller)
-			case "Patch":
+			case "PATCH":
 				g.patch(request.relativePath, request.controller)
-			case "Options":
+			case "OPTIONS":
 				g.options(request.relativePath, request.controller)
-			case "Any":
+			case "ANY":
 				g.any(request.relativePath, request.controller)
-			case "Use":
+			case "USE":
 				g.use(request.controller)
-			case "Static":
+			case "STATIC":
 				g.Static(request.relativePath, request.filePath)
 			default:
 				g.get(request.relativePath, request.controller)

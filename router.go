@@ -113,7 +113,7 @@ func (r *router) Request(method string, relativePath string, controller Controll
 // Use 在组中添加一个中间件
 //middleware 中间件控制器
 func (r *router) Use(middleware ControllerInterface) {
-	r.Request("Use", "",  middleware)
+	r.Request("USE", "",  middleware)
 }
 
 // POST 添加 POST 路由信息
@@ -170,14 +170,14 @@ func (r *router) HEAD(relativePath string, controller ControllerInterface) {
 //relativePath 网站的相对路径
 //c 控制器方法
 func (r *router) Any(relativePath string, controller ControllerInterface) {
-	r.Request("Any", relativePath, controller)
+	r.Request("ANY", relativePath, controller)
 }
 
 // Static 添加静态资源路由
 //relativePath 网站的相对路径
 //filePath 文件的路径
 func (r *router) Static(relativePath string, filePath string) {
-	r.Request("Static", relativePath,nil, filePath)
+	r.Request("STATIC", relativePath,nil, filePath)
 }
 
 func init()  {
