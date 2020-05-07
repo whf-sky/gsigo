@@ -3,7 +3,6 @@ package gsigo
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/tabalt/gracehttp"
 	"net/http"
 	"os"
 	"reflect"
@@ -39,7 +38,7 @@ func (g *ggin) newServer() {
 func (g *ggin) run(addr ...string)  {
 	address := g.resolveAddress(addr)
 	g.debugPrint("Listening and serving HTTP on "+address)
-	err := gracehttp.ListenAndServe(address, g.Engine)
+	err := http.ListenAndServe(address, g.Engine)
 	if err != nil {
 		Log.Error(err)
 	}

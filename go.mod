@@ -28,5 +28,4 @@ require (
 	github.com/googollee/go-socket.io v1.4.2
 	github.com/jinzhu/gorm v1.9.12
 	github.com/sirupsen/logrus v1.4.2
-	github.com/tabalt/gracehttp v1.3.0
 )
