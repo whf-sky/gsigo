@@ -12,24 +12,24 @@ import (
 //钩子函数
 type hooksFunc func() error
 
-func newHook()  *Hook{
-	return &Hook{hooks: []hooksFunc{}}
+func newHook()  *hook{
+	return &hook{hooks: []hooksFunc{}}
 }
 
-type Hook struct {
+type hook struct {
 	//钩子
 	hooks []hooksFunc
 }
 
 //添加钩子
 //hfuncs 钩子执行的函数
-func(h *Hook) add(hfuncs ...hooksFunc) *Hook{
+func(h *hook) add(hfuncs ...hooksFunc) *hook{
 	h.hooks = append(h.hooks ,hfuncs...)
 	return h
 }
 
 //运行某个组的钩子
-func(h *Hook) run() error {
+func(h *hook) run() error {
 	for _, hook := range h.hooks {
 		err := hook()
 		if err != nil {

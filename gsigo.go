@@ -5,6 +5,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/whf-sky/gsigo/cache/redis"
 	"github.com/whf-sky/gsigo/orm"
+	"os"
 )
 
 const (
@@ -49,7 +50,6 @@ func Version () {
 //运行前初始化钩子
 func initBeforeRun() {
 	newHook().add(
-		registerGetEnvHook,
 		sysConfig,
 		registerLogHook,
 		registerRedisHook,
@@ -74,5 +74,13 @@ func Run(file ...string) {
 		Ggin = newGgin().run()
 	default:
 		Ggin = newGgin().run()
+	}
+}
+
+func init()  {
+	//环境变量中获取环境变量
+	ENV = os.Getenv("GSIGO_ENV")
+	if ENV == "" {
+		ENV = "production"
 	}
 }
