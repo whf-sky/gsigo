@@ -13,6 +13,7 @@ func newGsocketio() *gsocketio {
 		nsp: "/",
 		users: map[string]map[string]socketio.Conn{},
 		cids: map[string]string{},
+		conns: map[string]socketio.Conn{},
 	}
 	return Gsocketio.newServer()
 }
