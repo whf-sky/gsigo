@@ -195,6 +195,22 @@ app.name = "gsigo"
 gsigo.Config.APP.Name
 ````
 
+- app.close_config_file
+
+###### 关闭自动加载配置文件
+
+###### 配置文件中设置，布尔类型
+
+```ini
+app.close_config_file = true
+````
+
+###### 代码中调用
+
+```go
+gsigo.Config.APP.CloseConfigFile
+````
+
 - app.debug
 
 ###### 应用debug，默认值`true`。

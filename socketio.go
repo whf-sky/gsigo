@@ -9,13 +9,12 @@ import (
 
 //实例化一个socketio服务
 func newGsocketio() *gsocketio {
-	s := &gsocketio{
+	Gsocketio = &gsocketio{
 		nsp: "/",
 		users: map[string]map[string]socketio.Conn{},
 		cids: map[string]string{},
 	}
-	s.newServer()
-	return s
+	return Gsocketio.newServer()
 }
 
 type gsocketio struct {
@@ -44,7 +43,7 @@ func (s *gsocketio) run() *gsocketio {
 }
 
 //newServer 实例一个 socketio 服务
-func (s *gsocketio) newServer() {
+func (s *gsocketio) newServer() *gsocketio {
 	var err error
 	s.Server, err = socketio.NewServer(&engineio.Options{
 		PingInterval:time.Duration(Config.Socket.PingInterval) * time.Second,
@@ -54,6 +53,7 @@ func (s *gsocketio) newServer() {
 		Log.Error(err)
 	}
 	s.registerRouter()
+	return s
 }
 
 //registerRouter 注册路由 onConnect, onEvent, onError, onDisconnect router
@@ -123,7 +123,7 @@ func (s *gsocketio) groupHandle(eventType string, nsp string, conn socketio.Conn
 func (s *gsocketio) onConnect(event EventInterface){
 	s.Server.OnConnect(s.nsp, func(conn socketio.Conn)  error {
 		s.lock.Lock()//获取写锁
-		//删除连接信息
+		//添加连接
 		if _,ok := s.conns[conn.ID()];!ok{
 			s.conns[conn.ID()] = conn
 		}

@@ -67,13 +67,13 @@ func Run(file ...string) {
 	//模式
 	switch Config.APP.Mode {
 	case ModeSocketio:
-		Gsocketio = newGsocketio().run()
+		newGsocketio().run()
 	case ModeCmd:
-		Gcmd = newCmd().run()
+		newCmd().run()
 	case ModeGin:
-		Ggin = newGgin().run()
+		newGgin().run()
 	default:
-		Ggin = newGgin().run()
+		newGgin().run()
 	}
 }
 

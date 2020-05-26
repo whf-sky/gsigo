@@ -8,7 +8,8 @@ import (
 
 // NewApp 实例化 ggin
 func newCmd() *cmd {
-	return &cmd{}
+	Gcmd = &cmd{}
+	return Gcmd
 }
 
 type cmd struct {}

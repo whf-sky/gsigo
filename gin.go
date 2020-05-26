@@ -12,7 +12,8 @@ import (
 
 // NewApp 实例化 ggin
 func newGgin() *ggin {
-	return (&ggin{}).server()
+	Ggin = &ggin{}
+	return Ggin.server()
 }
 
 //gin
