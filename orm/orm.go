@@ -4,6 +4,27 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
+//启动所有的组的数据库连接
+func OpenGroup(configRead func(out interface{}) error) (map[string]*group, error) {
+	//配置信息
+	var configs map[string]dbGroupsCnf
+	//获取配置文件配置信息
+	err := configRead(&configs)
+	if err != nil {
+		return nil, err
+	}
+	if len(configs) == 0 {
+		return nil, nil
+	}
+	//数据库连接组
+	groups := map[string]*group{}
+	//启动组的数据连接
+	for gname, config := range configs {
+		groups[gname] = newGroup().openGroup(config)
+	}
+	return groups, nil
+}
+
 // Open initialize a new db connection, need to import driver first, e.g:
 //
 //     import _ "github.com/go-sql-driver/mysql"
@@ -18,6 +39,5 @@ import (
 //    // import _ "github.com/jinzhu/gorm/dialects/mssql"
 func Open(driver string, dsn string) (db *gorm.DB, err error){
 	// Open initialize a new db connection
-	db, err = gorm.Open(driver, dsn)
-	return
+	return gorm.Open(driver, dsn)
 }

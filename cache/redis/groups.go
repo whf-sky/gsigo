@@ -5,77 +5,53 @@ import (
 	"time"
 )
 
-var groups map[string]*group
-
-//get groups
-func using(gname ...string) map[string]*group {
-	// panic error not database group
-	if len(gname) == 0 {
-		panic("not database group")
-	}
-
-	tGroups := map[string]*group{}
-	for _, name := range gname  {
-		if _, ok := groups[name]; !ok {
-			groups[name] = &group{}
-			groups[name].get(name)
-		}
-		tGroups[name] = groups[name]
-	}
-	return tGroups
+//实力化组
+func newGroup() *group {
+	return &group{}
 }
 
-//redis group
+//redis数据组
 type group struct {
-	Config 	GroupCnf
+	//Config 	GroupCnf
 	Pool 	*redis.Pool
 	Master 	*redis.Pool
 	Slave 	[]*redis.Pool
 }
 
-//get redis group
-func (g *group) get(name string) *group {
-	//get databases group
-	var ok bool
-	g.Config, ok = configs[name]
-	if !ok {
-		panic("database configs be short of '"+name+"'")
-	}
-
-	//Do not distinguish between master and slave
-	if g.Config.Address != "" {
-		g.Pool = g.dial(g.Config, g.Config.Address, g.Config.MaxIdle)
+//获取redis数据组
+func (g *group) dialGroup(config GroupCnf) *group {
+	//主从不存在时获取单台redis连接
+	if config.Address != "" {
+		g.Pool = g.dial(config, config.Address, config.MaxIdle)
 		return g
 	}
 
-	//get master gorm
-	g.Master = g.dial(g.Config, g.Config.Master.Address, g.Config.Master.MaxIdle)
+	//打开写的连接
+	g.Master = g.dial(config, config.Master.Address, config.Master.MaxIdle)
 
-	//get slave gorm
-	for i, addr := range g.Config.Slave.Address  {
-		g.Slave[i] = g.dial(g.Config, addr, g.Config.Slave.MaxIdle)
+	//打开读的连接
+	for i, addr := range config.Slave.Address  {
+		g.Slave[i] = g.dial(config, addr, config.Slave.MaxIdle)
 	}
 	return g
 }
 
-//Open initialize a new redis connection
+//打开一个新的redis连接
+//config 配置信息
+//address 连接地址
+//maxIdle 连接池的最大链接数
 func (g *group) dial(config GroupCnf, address string, maxIdle int) *redis.Pool {
 	dial := func() (redis.Conn, error) {
 		r, err  := Dial(address,
-						redis.DialPassword(config.Password),
-						redis.DialDatabase(config.Select),
-						redis.DialKeepAlive(time.Second * time.Duration(config.KeepAlive)))
+			redis.DialPassword(config.Password),
+			redis.DialDatabase(config.Select),
+			redis.DialKeepAlive(time.Second * time.Duration(config.KeepAlive)))
 		return r, err
 	}
-	// initialize a new pool
+	// 初始化一个新的连接池
 	return &redis.Pool{
 		MaxIdle:     maxIdle,
 		IdleTimeout: 180 * time.Second,
 		Dial:        dial,
 	}
 }
-
-func init()  {
-	groups = map[string]*group{}
-}
-

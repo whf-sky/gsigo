@@ -40,11 +40,5 @@ func (l *log) hook(hook string, params map[string]string)  {
 		l.logrus.Hooks.Add(fun(params))
 		return
 	}
-	l.defaultHook()
-}
-
-//developHook develop hook
-func (l *log) defaultHook()  {
-	hook := hooks.NewDefault()
-	l.logrus.Hooks.Add(hook)
+	l.logrus.Hooks.Add(hooks.NewDefault())
 }

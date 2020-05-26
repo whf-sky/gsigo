@@ -1,12 +1,5 @@
 package orm
 
-import (
-	"github.com/whf-sky/gsigo"
-	"github.com/whf-sky/gsigo/config"
-)
-
-var configs map[string]dbGroupsCnf
-
 type dbGroupsCnf struct {
 	Driver 		string  	`ini:"driver"`
 	Dsn 		string  	`ini:"dsn"`
@@ -28,11 +21,4 @@ type SlaveCnf struct {
 	Dsn 	[]string  	`ini:"dsn"`
 	MaxOpen int 		`ini:"max_open"`
 	MaxIdle int 		`ini:"max_idle"`
-}
-
-func init() {
-	err := config.NewIni().Read( &configs, "./configs/"+gsigo.ENV+"/database.ini")
-	if err != nil {
-		panic(err)
-	}
 }

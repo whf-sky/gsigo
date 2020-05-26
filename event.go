@@ -58,10 +58,37 @@ func (e *Event) SetUser(uid string)  {
 	}
 	//用户编号与连接关系绑定
 	if _,ok := Gsocketio.users[uid];!ok{
-		Gsocketio.users[uid] = map[string]int{}
+		Gsocketio.users[uid] = map[string]socketio.Conn{}
 	}
+	//给用户绑定连接
 	if _,ok := Gsocketio.users[uid][cid];!ok{
-		Gsocketio.users[uid][cid] = len(Gsocketio.users[uid])+1
+		Gsocketio.users[uid][cid] = e.Conn
+	}
+}
+
+//根据链接发送消息
+func  (e *Event) EmitByCid (cid string, msg string, v ...interface{}) {
+	//获取读锁
+	Gsocketio.lock.RLock()
+	//读锁解锁
+	defer Gsocketio.lock.RUnlock()
+	//发送消息
+	if conn,ok := Gsocketio.conns[cid]; ok{
+		conn.Emit(msg, v...)
+	}
+}
+
+//根据用户编号发送消息
+func  (e *Event) EmitByUid (uid string, msg string, v ...interface{}) {
+	//获取读锁
+	Gsocketio.lock.RLock()
+	//读锁解锁
+	defer Gsocketio.lock.RUnlock()
+	//发送消息
+	if conns,ok := Gsocketio.users[uid]; ok{
+		for _, conn := range conns {
+			conn.Emit(msg, v...)
+		}
 	}
 }
 
@@ -72,21 +99,21 @@ func (e *Event) GetUser() string {
 	//读锁解锁
 	defer Gsocketio.lock.RUnlock()
 	//根据连接获取用户
-	if val,ok := Gsocketio.cids[e.Conn.ID()];ok {
-		return val
+	if uid,ok := Gsocketio.cids[e.Conn.ID()];ok {
+		return uid
 	}
 	return ""
 }
 
 //GetCidsByUser 根据用户获取连接信息
-func (e *Event) GetCidsByUser(uid string) map[string]int {
+func (e *Event) GetCidsByUser(uid string) map[string]socketio.Conn {
 	//获取读锁
 	Gsocketio.lock.RLock()
 	//读锁解锁
 	defer Gsocketio.lock.RUnlock()
 	//根据用户获取多个连接信息
-	if val,ok := Gsocketio.users[uid];ok {
-		return val
+	if conns,ok := Gsocketio.users[uid];ok {
+		return conns
 	}
 	return nil
 }

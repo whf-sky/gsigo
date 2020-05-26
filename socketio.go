@@ -7,11 +7,11 @@ import (
 	"time"
 )
 
-//NewApp returns a new wsigo application.
+//实例化一个socketio服务
 func newGsocketio() *gsocketio {
 	s := &gsocketio{
 		nsp: "/",
-		users: map[string]map[string]int{},
+		users: map[string]map[string]socketio.Conn{},
 		cids: map[string]string{},
 	}
 	s.newServer()
@@ -24,15 +24,23 @@ type gsocketio struct {
 	//读锁
 	lock sync.RWMutex
 	//用户与连接绑定关系关系
-	//map[用户编号]map[连接编号]conn num
-	users map[string]map[string]int
-
+	//map[用户编号]map[连接编号]Conn
+	users map[string]map[string]socketio.Conn
 	//连接编号与用户编号关系
 	//map[连接编号]用户编号
 	cids map[string]string
-
+	//socket连接
+	conns map[string]socketio.Conn
 	//socketio服务
 	Server *socketio.Server
+}
+
+//运行服务
+func (s *gsocketio) run() *gsocketio {
+	defer s.close()
+	go s.serve()
+	newGgin().socketioRouter(s.Server).run()
+	return s
 }
 
 //newServer 实例一个 socketio 服务
@@ -113,7 +121,13 @@ func (s *gsocketio) groupHandle(eventType string, nsp string, conn socketio.Conn
 //onConnect add connect event
 //event 事件控制器
 func (s *gsocketio) onConnect(event EventInterface){
-	s.Server.OnConnect(s.nsp, func(conn socketio.Conn)  error{
+	s.Server.OnConnect(s.nsp, func(conn socketio.Conn)  error {
+		s.lock.Lock()//获取写锁
+		//删除连接信息
+		if _,ok := s.conns[conn.ID()];!ok{
+			s.conns[conn.ID()] = conn
+		}
+		s.lock.Unlock()//写锁解锁
 		s.groupHandle("connect", s.nsp, conn, "", nil)
 		s.funcHandle("connect", event, conn, "", nil)
 		return event.GetError()
@@ -123,7 +137,7 @@ func (s *gsocketio) onConnect(event EventInterface){
 //onEvent add evnet event
 //eventName socketio事件名称
 //event 事件控制器
-func (s *gsocketio)onEvent(eventName string, event EventInterface){
+func (s *gsocketio) onEvent(eventName string, event EventInterface){
 	var f interface{}
 	if event.IsAck() == false {
 		f = func(conn socketio.Conn, message string) {
@@ -152,6 +166,25 @@ func (s *gsocketio) onError(event EventInterface){
 //event 事件控制器
 func (s *gsocketio) onDisconnect(event EventInterface){
 	s.Server.OnDisconnect(s.nsp, func(conn socketio.Conn, message string) {
+		s.lock.Lock()//获取写锁
+		cid := conn.ID()
+		//删除cid与uid映射关系
+		uid, ok := s.cids[cid];
+		if ok {
+			delete(s.cids, cid)
+		}
+		//从socket连接集合里删除连接
+		if _,ok := s.conns[cid]; ok {
+			delete(s.conns, cid)
+		}
+		//删除用户绑定的连接
+		if conns, ok := s.users[uid]; ok {
+			delete(conns, cid)
+			if len(conns) == 0 {
+				delete(s.users, uid)
+			}
+		}
+		s.lock.Unlock()//写锁解锁
 		s.groupHandle("disconnect", s.nsp, conn, message, nil)
 		s.funcHandle("disconnect", event, conn, message, nil)
 	})

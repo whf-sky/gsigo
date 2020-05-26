@@ -1,8 +1,8 @@
 package orm
 
 import (
-	"github.com/go-playground/validator/v10"
 	"database/sql"
+	"github.com/go-playground/validator/v10"
 	"github.com/jinzhu/gorm"
 )
 
@@ -12,27 +12,45 @@ const (
 	ModeSlave
 )
 
-func NewDB(gname ...string) *DB  {
-	return (&DB{
+func NewDB() *DB  {
+	return &DB{
 		trans:		false,
 		validate:	validator.New(),
-	}).Using(gname...)
+	}
 }
 
 type DB struct {
 	db 			*gorm.DB
 	groups 		map[string]*group
-	gnames 		[]string
+	group 		*group
 	mode 		int
 	curSlave 	int
 	trans 		bool
 	validate   *validator.Validate
 }
 
+//设置组信息
+func (d *DB) SetGroups(groups map[string]*group) *DB {
+	d.groups = groups
+	return d
+}
+
+//设置gorm.db
+func (d *DB) SetDb(db *gorm.DB) *DB {
+	d.db = db
+	return d
+}
+
 //open database group
-func (d *DB) Using(gname ...string) *DB {
-	d.gnames = gname
-	d.groups = using(gname...)
+func (d *DB) Using(gname string) *DB {
+	if gname == "" {
+		panic("No gname information")
+	}
+	group, ok := d.groups[gname];
+	if !ok {
+		panic("database group not exist")
+	}
+	d.group = group
 	return d
 }
 
@@ -159,8 +177,8 @@ func (d *DB) FirstOrCreate(out interface{}, funcs ...func(db *gorm.DB) *gorm.DB 
 }
 
 // Count get how many records for a model
-func (d *DB) Count(value interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB {
-	return d.Db(ModeSlave, funcs...).Count(value)
+func (d *DB) Count(model interface{}, value interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB {
+	return d.Db(ModeSlave, funcs...).Model(model).Count(value)
 }
 
 // Row return `*sql.Row` with given conditions
@@ -175,8 +193,8 @@ func (d *DB) Rows(funcs ...func(db *gorm.DB) *gorm.DB ) (*sql.Rows, error) {
 
 //var ages []int64
 //db.Find(&users).Pluck("age", &ages)
-func (d *DB) Pluck(column string, value interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB {
-	return d.Db(ModeSlave, funcs...).Pluck(column, value)
+func (d *DB) Pluck(model interface{}, column string, value interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB {
+	return d.Db(ModeSlave, funcs...).Model(model).Pluck(column, value)
 }
 
 // Scan scan value to a struct
@@ -203,35 +221,35 @@ func (d *DB) Db(mode int, funcs ...func(db *gorm.DB) *gorm.DB) *gorm.DB {
 	if d.trans {
 		return d.db
 	}
+	//当db被直接设置时使用
+	if d.db != nil {
+		return d.db
+	}
 	//还原mode为默认值
 	defer func() {
+		d.db = nil
 		d.mode = ModeDefault
 	}()
 	//当DB mode 不等于默认值时对BD mode进行修改
 	if d.mode != ModeDefault {
 		mode = d.mode
 	}
-	//获取组信息
-	group, ok := d.groups[d.gnames[0]]
-	if !ok {
-		panic("this dao without using group")
-	}
 	//当数据连接没有配置主库的时候使用默认数据库连接
-	if group.Master == nil {
-		d.db = group.Db
+	if d.group.Master == nil {
+		d.db = d.group.Db
 		return d.callback(funcs)
 	}
 	//当存在主库配置并且mode值为主库时使用主数据库连接
 	if mode == ModeMaster {
-		d.db = group.Master
+		d.db = d.group.Master
 		return d.callback(funcs)
 	}
 	//使用从库的数据连接
-	sCnt := len(group.Slave)
+	sCnt := len(d.group.Slave)
 	if d.curSlave > sCnt-1 {
 		d.curSlave = 0
 	}
-	d.db = group.Slave[d.curSlave]
+	d.db = d.group.Slave[d.curSlave]
 	d.curSlave++
 
 	return d.callback(funcs)
@@ -241,8 +259,7 @@ func (d *DB) Db(mode int, funcs ...func(db *gorm.DB) *gorm.DB) *gorm.DB {
 func  (d *DB)  clone() *DB {
 	return &DB{
 		db:       	d.db,
-		groups:   	d.groups,
-		gnames:   	d.gnames,
+		group:   	d.group,
 		mode:     	d.mode,
 		curSlave: 	d.curSlave,
 		trans:		true,

@@ -5,95 +5,63 @@ import (
 	"time"
 )
 
-var groups map[string]*group
-
-//get groups
-func using(gname ...string) map[string]*group {
-	// panic error not database group
-	if len(gname) == 0 {
-		panic("not database group")
-	}
-
-	tGroups := map[string]*group{}
-	for _, name := range gname  {
-		if _, ok := groups[name]; !ok {
-			groups[name] = &group{}
-			groups[name].get(name)
-		}
-		tGroups[name] = groups[name]
-	}
-	return tGroups
+//实力化组
+func newGroup() *group {
+	return &group{}
 }
 
-//database group
+//数据库组
 type group struct {
-	Config 	dbGroupsCnf
 	Db 		*gorm.DB
 	Master 	*gorm.DB
 	Slave 	[]*gorm.DB
 }
 
-//get gorm group
-func (g *group) get(name string) *group {
-	//get databases group
-	var ok bool
-	g.Config, ok = configs[name]
-	if !ok {
-		panic("database configs be short of '"+name+"'")
-	}
-
-	//Do not distinguish between master and slave
-	if g.Config.Dsn != "" {
-		g.Db = g.open(g.Config.Driver,
-			g.Config.Dsn,
-			g.Config.MaxIdle,
-			g.Config.MaxOpen,
-			g.Config.MaxLifetime)
+//启动一个组的数据库连接
+func (g *group) openGroup(config dbGroupsCnf) *group {
+	//不存在主从配置时直接打开一个数据库连接
+	if config.Dsn != "" {
+		g.Db = g.open(config.Driver,
+			config.Dsn,
+			config.MaxIdle,
+			config.MaxOpen,
+			config.MaxLifetime)
 		return g
 	}
 
-	//get master gorm
-	g.Master = g.open(g.Config.Driver,
-		g.Config.Master.Dsn,
-		g.Config.Master.MaxIdle,
-		g.Config.Master.MaxOpen,
-		g.Config.MaxLifetime)
+	//打开主库的数据库连接
+	g.Master = g.open(config.Driver,
+		config.Master.Dsn,
+		config.Master.MaxIdle,
+		config.Master.MaxOpen,
+		config.MaxLifetime)
 
-	//get slave gorm
-	for i, dsn := range g.Config.Slave.Dsn  {
-		g.Slave[i] = g.open(g.Config.Driver,
+	//打开从库的数据库连接
+	for i, dsn := range config.Slave.Dsn  {
+		g.Slave[i] = g.open(config.Driver,
 			dsn,
-			g.Config.Slave.MaxIdle,
-			g.Config.Slave.MaxOpen,
-			g.Config.MaxLifetime)
+			config.Slave.MaxIdle,
+			config.Slave.MaxOpen,
+			config.MaxLifetime)
 	}
 	return g
 }
 
-//Open initialize a new db connection
+//Open 初始化一个数据库连接
 func (g *group) open(driver string, dsn string, maxIdle int, maxOpen int, maxLifetime int) *gorm.DB {
-	// Open initialize a new db connection
+	// 打开一个新的数据库连接
 	db, err := Open(driver, dsn)
-
-	//panic error
 	if err != nil {
 		panic(err)
 	}
 
-	// SetMaxIdleConns sets the maximum number of connections in the idle connection pool.
+	// 设置空闲连接池中的最大连接数。
 	db.DB().SetMaxIdleConns(maxIdle)
-
-	// SetMaxOpenConns sets the maximum number of open connections to the database.
+	// 设置到数据库的最大打开连接数。
 	db.DB().SetMaxOpenConns(maxOpen)
-
-	// SetConnMaxLifetime sets the maximum amount of time a connection may be reused.
+	// 设置可重用连接的最大时间量。
 	db.DB().SetConnMaxLifetime(time.Duration(maxLifetime) * time.Hour)
 
 	return db
-}
-
-
-func init()  {
-	groups = map[string]*group{}
 }
 

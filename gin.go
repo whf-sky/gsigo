@@ -3,6 +3,7 @@ package gsigo
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	socketio "github.com/googollee/go-socket.io"
 	"net/http"
 	"os"
 	"reflect"
@@ -11,9 +12,7 @@ import (
 
 // NewApp 实例化 ggin
 func newGgin() *ggin {
-	s := &ggin{}
-	s.newServer()
-	return s
+	return (&ggin{}).server()
 }
 
 //gin
@@ -23,7 +22,7 @@ type ggin struct {
 }
 
 //newServer create gin
-func (g *ggin) newServer() {
+func (g *ggin) server() *ggin {
 	//设置gin模式信息
 	if !Config.APP.Debug {
 		gin.SetMode(gin.ReleaseMode)
@@ -32,17 +31,32 @@ func (g *ggin) newServer() {
 	g.Engine = gin.New()
 	//注册路由信息
 	g.registerRouter()
+	return g
+}
+
+//socketio路由规则
+func (g *ggin) socketioRouter(server *socketio.Server) *ggin {
+	g.Engine.GET("/socket.io/*any", gin.WrapH(server))
+	g.Engine.POST("/socket.io/*any", gin.WrapH(server))
+	return g
 }
 
 //run 使用可平滑重启方式运行
-func (g *ggin) run(addr ...string)  {
+func (g *ggin) run() *ggin {
+	addr := []string{}
+	if Config.APP.Host == "" {
+		addr = []string{":" + Config.APP.Port}
+	}
+	if Config.APP.Host != "" && Config.APP.Port != ""{
+		addr = []string{Config.APP.Host + ":" + Config.APP.Port}
+	}
 	address := g.resolveAddress(addr)
 	g.debugPrint("Listening and serving HTTP on "+address)
 	err := http.ListenAndServe(address, g.Engine)
 	if err != nil {
 		Log.Error(err)
 	}
-	return
+	return g
 }
 
 //resolveAddress 分析地址
@@ -132,28 +146,21 @@ func (g *ggin) handle(c ControllerInterface, ctx *gin.Context, actionName string
 
 //execute 控制器的执行函数
 func (g *ggin) execute(c ControllerInterface, actionName string){
-	switch actionName {
-	case "Post":
-		c.Post()
-	case "Get":
-		c.Get()
-	case "Delete":
-		c.Delete()
-	case "Put":
-		c.Put()
-	case "Head":
-		c.Head()
-	case "Patch":
-		c.Patch()
-	case "Options":
-		c.Options()
-	case "Any":
-		c.Any()
-	case "Group":
-		c.Group()
-	case "Use":
-		c.Use()
-	default:
+	var actions = map[string]func() {
+		"Post":c.Post,
+		"Get":c.Get,
+		"Delete":c.Delete,
+		"Put":c.Put,
+		"Head":c.Head,
+		"Patch":c.Patch,
+		"Options":c.Options,
+		"Any":c.Any,
+		"Group":c.Group,
+		"Use":c.Use,
+	}
+	if action, ok := actions[actionName]; ok {
+		action()
+	} else {
 		c.Get()
 	}
 }
@@ -174,7 +181,7 @@ func (g *ggin) group(relativePath string, c ControllerInterface) *gin.RouterGrou
 // Use 在组中添加一个中间件
 //middleware 中间件控制器
 func (g *ggin) use(middleware ControllerInterface) *ggin {
-	g.RouterGroup.Use(func(context *gin.Context) {
+	g.Engine.Use(func(context *gin.Context) {
 		g.handle(middleware, context, "Use")
 	})
 	return g

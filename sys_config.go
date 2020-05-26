@@ -2,6 +2,7 @@ package gsigo
 
 import (
 	"github.com/whf-sky/gsigo/config"
+	"path/filepath"
 )
 
 //gsigo config
@@ -27,6 +28,8 @@ type APPCnf struct {
 	//is open debug
 	//value is true/false
 	Debug bool `ini:"debug"`
+	//关闭配置文件 默认关闭
+	CloseConfigFile bool `ini:"close_config_file"`
 }
 
 //socket config for gsigo config
@@ -50,15 +53,12 @@ type LogCnf struct {
 	Params map[string]string `ini:"params"`
 }
 
-//loadConfig 加载配置信息
-func loadConfig(file ...string) {
-	if len(file) == 0 {
+//加载配置信息
+func sysConfig() error {
+	if sysConfigFile == "" {
 		Config.APP.Debug = true
-		return
+		return nil
 	}
-	ConfigPath =  file[0]
-	err  := config.NewIni().ReadMerge( &Config, ConfigPath, ENV)
-	if err != nil {
-		panic(err)
-	}
+	ConfigPath = filepath.Dir(sysConfigFile)
+	return config.NewIni().ReadMerge( &Config, sysConfigFile, ENV)
 }

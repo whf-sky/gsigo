@@ -757,10 +757,10 @@ func (e *Event) SetUser(uid string)
 func (e *Event) GetUser() string
 ```
 
-###### 根据用户获取所有的链接编号,map[Conn.ID()]无意义占位符
+###### 根据用户获取所有的链接
 
 ```go
-func (e *Event) GetCidsByUser(uid string) map[string]int
+func (e *Event) GetCidsByUser(uid string) map[string]socketio.Conn 
 ```
 
 ###### 是否ACK消息
@@ -806,6 +806,19 @@ func (e *Event) SetError(text string)
 func (e *Event) GetError() error
 ```
 
+###### 根据链接变号发送消息
+
+```go
+func  (e *Event) EmitByCid (cid string, msg string, v ...interface{})
+```
+
+
+###### 根据用户编号发送消息
+
+```go
+func  (e *Event) EmitByUid (uid string, msg string, v ...interface{}) 
+```
+
 ## CMD应用
 
 ##### 示例
@@ -841,6 +854,9 @@ go run cmd.go  -request_uri=requestUri
 
 - `Execute` 执行方法
 
+
+
+
 ## 数据库
 
 > [参考gorm](https://gorm.io/docs/index.html)
@@ -853,16 +869,16 @@ go run cmd.go  -request_uri=requestUri
 
 [MODEL详细文档](https://gorm.io/docs/models.html)
 
-######  实例DB
+###### 使用
 
 ```go
-NewDB(gname ...string) *DB 
+gsigo.GOrm.
 ```
 
 ###### 使用配置的组，如不使用`NewDB`需自己实例化使用此方法
 
 ```go
-func (d *DB) Using(gname ...string) *DB
+func (d *DB) Using(gname string) *DB
 
 ```
 
@@ -895,7 +911,7 @@ func (d *DB) Transaction (fc func(tx *DB) error) (err error)
 ###### 示例
 
 ```go
-db.Transaction(func(tx *DB) error {
+gsigo.GOrm.Transaction(func(tx *DB) error {
     // do some database operations in the transaction (use 'tx' from this point, not 'db')
     if err := tx.Create(&Animal{Name: "Giraffe"}).Error; err != nil {
       // return any error will rollback
@@ -990,7 +1006,7 @@ type User struct {
 
 user := User{Name: "Jinzhu", Age: 18, Birthday: time.Now()}
 
-db := NewDB("user")
+db := gsigo.GOrm.Using("user")
 
 db.Create(&user)
 
@@ -1017,7 +1033,7 @@ type User struct {
 
 user := User{Name: "Jinzhu", Age: 18, Birthday: time.Now()}
 
-db := NewDB("user")
+db := gsigo.GOrm.Using("user")
 
 // Delete an existing record
 db.Delete(&email)
@@ -1068,7 +1084,7 @@ type User struct {
   Age  sql.NullInt64 `gorm:"default:18"`
 }
 
-db := NewDB("user")
+db := gsigo.GOrm.Using("user")
 // Update single attribute if it is changed
 db.Update([]string{"name", "hello"}, func(db *gorm.DB) *gorm.DB {
 	db.Model(&user)
@@ -1156,7 +1172,7 @@ type User struct {
 
 user := User{Name: "Jinzhu", Age: 18, Birthday: time.Now()}
 
-db := NewDB("user")
+db := gsigo.GOrm.Using("user")
 
 // Get first matched record
 db.First(&user, func(db *gorm.DB) *gorm.DB {
@@ -1258,10 +1274,10 @@ func (w *Words) BeforeCreate(scope *gorm.Scope) error {
 
 ##### 代码实现了读写分离操作
 
-#####  实例redis
+#####  使用
 
 ```go
-func NewRedis(gname ...string) *Redis
+gsigo.GRedis.
 ```
 
 ##### 使用的redis配置的组，如不使用`redis.NewRedis`需自己实例化使用此方法

@@ -1,13 +1,5 @@
 package redis
 
-import (
-	"github.com/whf-sky/gsigo"
-	"github.com/whf-sky/gsigo/config"
-)
-
-// Wsi is an application instance
-var configs map[string]GroupCnf
-
 // redis config items
 type GroupCnf struct {
 	//host:port
@@ -32,11 +24,4 @@ type SlaveCnf struct {
 	//host:port
 	Address []string 	`ini:"address"`
 	MaxIdle int 		`ini:"max_idle"`
-}
-
-func init() {
-	err := config.NewIni().Read( &configs, "./configs/"+gsigo.ENV+"/redis.ini")
-	if err != nil {
-		panic(err)
-	}
 }
