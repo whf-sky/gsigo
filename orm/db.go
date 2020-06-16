@@ -103,8 +103,10 @@ func (d *DB) Rollback() *gorm.DB {
 	return d.Db(ModeMaster).Rollback()
 }
 
+type gormFunc func(db *gorm.DB) *gorm.DB
+
 // Create insert the value into database
-func (d *DB) Create(value interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) (*gorm.DB, error) {
+func (d *DB) Create(value interface{}, funcs ...gormFunc ) (*gorm.DB, error) {
 	err := d.validate.Struct(value)
 	if err != nil {
 		return nil, err
@@ -113,92 +115,92 @@ func (d *DB) Create(value interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) (*g
 }
 
 // Create insert the value into database
-func (d *DB) Insert(value interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) (*gorm.DB, error) {
+func (d *DB) Insert(value interface{}, funcs ...gormFunc ) (*gorm.DB, error) {
 	return d.Create(value, funcs...)
 }
 
 // Delete delete value match given conditions, if the value has primary key, then will including the primary key as condition
 // WARNING If model has DeletedAt field, GORM will only set field DeletedAt's value to current time
-func (d *DB) Delete(value interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB {
+func (d *DB) Delete(value interface{}, funcs ...gormFunc ) *gorm.DB {
 	return d.Db(ModeMaster, funcs...).Delete(value)
 }
 
 // Update update attributes with callbacks, refer: https://jinzhu.github.io/gorm/crud.html#update
 // WARNING when update with struct, GORM will not update fields that with zero value
-func (d *DB) Update(model interface{}, attrs []interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB {
+func (d *DB) Update(model interface{}, attrs []interface{}, funcs ...gormFunc ) *gorm.DB {
 	return d.Db(ModeMaster, funcs...).Model(model).Update(attrs...)
 }
 
 // Updates update attributes with callbacks, refer: https://jinzhu.github.io/gorm/crud.html#update
-func (d *DB) Updates(model interface{}, values interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB {
+func (d *DB) Updates(model interface{}, values interface{}, funcs ...gormFunc ) *gorm.DB {
 	return d.Db(ModeMaster, funcs...).Model(model).Updates(values)
 }
 
 // UpdateColumn update attributes without callbacks, refer: https://jinzhu.github.io/gorm/crud.html#update
-func (d *DB) UpdateColumn(model interface{}, attrs []interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB {
+func (d *DB) UpdateColumn(model interface{}, attrs []interface{}, funcs ...gormFunc ) *gorm.DB {
 	return d.Db(ModeMaster, funcs...).Model(model).UpdateColumn(attrs...)
 }
 
 // UpdateColumn update attributes without callbacks, refer: https://jinzhu.github.io/gorm/crud.html#update
-func (d *DB) UpdateColumns(model interface{}, values interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB {
+func (d *DB) UpdateColumns(model interface{}, values interface{}, funcs ...gormFunc ) *gorm.DB {
 	return d.Db(ModeMaster, funcs...).Model(model).UpdateColumns(values)
 }
 
 // First find first record that match given conditions, order by primary key
-func (d *DB) First(out interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB {
+func (d *DB) First(out interface{}, funcs ...gormFunc ) *gorm.DB {
 	return d.Db(ModeSlave, funcs...).First(out)
 }
 
 // Take return a record that match given conditions, the order will depend on the database implementation
-func (d *DB) Take(out interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB {
+func (d *DB) Take(out interface{}, funcs ...gormFunc ) *gorm.DB {
 	return d.Db(ModeSlave, funcs...).Take(out)
 }
 
 // Last find last record that match given conditions, order by primary key
-func (d *DB) Last(out interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB {
+func (d *DB) Last(out interface{}, funcs ...gormFunc ) *gorm.DB {
 	return d.Db(ModeSlave, funcs...).Last(out)
 }
 
 // Find find records that match given conditions
-func (d *DB) Find(out interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB {
+func (d *DB) Find(out interface{}, funcs ...gormFunc ) *gorm.DB {
 	return d.Db(ModeSlave, funcs...).Find(out)
 }
 
 // FirstOrInit find first matched record or initialize a new one with given conditions (only works with struct, map conditions)
 // https://jinzhu.github.io/gorm/crud.html#firstorinit
-func (d *DB) FirstOrInit(out interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB {
+func (d *DB) FirstOrInit(out interface{}, funcs ...gormFunc ) *gorm.DB {
 	return d.Db(ModeSlave, funcs...).FirstOrInit(out)
 }
 
 // FirstOrCreate find first matched record or create a new one with given conditions (only works with struct, map conditions)
 // https://jinzhu.github.io/gorm/crud.html#firstorcreate
-func (d *DB) FirstOrCreate(out interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB {
+func (d *DB) FirstOrCreate(out interface{}, funcs ...gormFunc ) *gorm.DB {
 	return d.Db(ModeSlave, funcs...).FirstOrCreate(out)
 }
 
 // Count get how many records for a model
-func (d *DB) Count(model interface{}, value interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB {
+func (d *DB) Count(model interface{}, value interface{}, funcs ...gormFunc ) *gorm.DB {
 	return d.Db(ModeSlave, funcs...).Model(model).Count(value)
 }
 
 // Row return `*sql.Row` with given conditions
-func (d *DB) Row(funcs ...func(db *gorm.DB) *gorm.DB ) *sql.Row {
+func (d *DB) Row(funcs ...gormFunc ) *sql.Row {
 	return d.Db(ModeSlave, funcs...).Row()
 }
 
 // Rows return `*sql.Rows` with given conditions
-func (d *DB) Rows(funcs ...func(db *gorm.DB) *gorm.DB ) (*sql.Rows, error) {
+func (d *DB) Rows(funcs ...gormFunc ) (*sql.Rows, error) {
 	return d.Db(ModeSlave, funcs...).Rows()
 }
 
 //var ages []int64
 //db.Find(&users).Pluck("age", &ages)
-func (d *DB) Pluck(model interface{}, column string, value interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB {
+func (d *DB) Pluck(model interface{}, column string, value interface{}, funcs ...gormFunc ) *gorm.DB {
 	return d.Db(ModeSlave, funcs...).Model(model).Pluck(column, value)
 }
 
 // Scan scan value to a struct
-func (d *DB) Scan(dest interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB {
+func (d *DB) Scan(dest interface{}, funcs ...gormFunc ) *gorm.DB {
 	return d.Db(ModeSlave, funcs...).Scan(dest)
 }
 
@@ -216,7 +218,7 @@ func (d *DB) Exec(sql string, values ...interface{}) *gorm.DB {
 // get a opened database specified by its database driver name and a
 // driver-specific data source name for database group, usually consisting of at least a
 // database name and connection information.
-func (d *DB) Db(mode int, funcs ...func(db *gorm.DB) *gorm.DB) *gorm.DB {
+func (d *DB) Db(mode int, funcs ...gormFunc) *gorm.DB {
 	//当是事务的时候直接返回
 	if d.trans {
 		return d.db
@@ -267,7 +269,7 @@ func  (d *DB)  clone() *DB {
 }
 
 //数据库操作的回调函数
-func (d *DB) callback(funcs []func(db *gorm.DB) *gorm.DB) *gorm.DB {
+func (d *DB) callback(funcs []gormFunc) *gorm.DB {
 	if len(funcs) > 0 {
 		for _, fun := range funcs  {
 			d.db = fun(d.db)

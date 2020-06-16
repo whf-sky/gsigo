@@ -18,26 +18,26 @@ func Nsp(nsp string, event ...EventInterface) *router {
 
 //OnConnect 添加连接事件路由
 //event 事件控制器
-func OnConnect(event EventInterface){
+func OnConnect(event evtFunc){
 	routerObj.OnConnect(event)
 }
 
 //OnEvent 添加事件路由
 //eventName socketio事件名称
 //event 事件控制器
-func OnEvent(eventName string, event EventInterface){
+func OnEvent(eventName string, event evtFunc){
 	routerObj.OnEvent(eventName, event)
 }
 
 //OnError 添加错误事件路由
 //event 事件控制器
-func OnError(event EventInterface){
+func OnError(event evtFunc){
 	routerObj.OnError(event)
 }
 
 //OnDisconnect 添加关闭事件路由
 //event 事件控制器
-func OnDisconnect(event EventInterface){
+func OnDisconnect(event evtFunc){
 	routerObj.OnDisconnect(event)
 }
 

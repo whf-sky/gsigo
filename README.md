@@ -451,10 +451,14 @@ slave.dsn[] = root:password@tcp(host:port)/database?charset=utf8&parseTime=True&
 
 > [参考gin](https://github.com/gin-gonic/gin)
 
+```go
+type ctrFunc func() ControllerInterface
+```
+
 ##### 分组
 
 ```go
-gsigo.Group(relativePath string, controller ...ControllerInterface) *router
+func Group(relativePath string, controller ...ctrFunc) *router
 ```
 
 ###### 示例
@@ -471,7 +475,7 @@ import (
 func init()  {
 	rootGin := gsigo.Group("/root/")
 	{
-		rootGin.GET("/", &index.IndexController{})
+		rootGin.GET("/", func() gsigo.ControllerInterface { return &index.IndexController{}})
 	}
 }
 ```
@@ -479,7 +483,7 @@ func init()  {
 ##### 使用中间件
 
 ```go
-gsigo.Use(controller ControllerInterface)
+gsigo.Use(controller ctrFunc)
 ```
 
 ##### 静态文件路由规则
@@ -491,41 +495,41 @@ gsigo.Static(relativePath string, filePath string)
 ##### POST
 
 ```go
-gsigo.POST(relativePath string, controller ControllerInterface)
+gsigo.POST(relativePath string, controller ctrFunc)
 ```
 ##### GET
 
 ```go
-gsigo.GET(relativePath string, controller ControllerInterface)
+gsigo.GET(relativePath string, controller ctrFunc)
 ```
 
 ##### DELETE
 
 ```go
-gsigo.DELETE(relativePath string, controller ControllerInterface)
+gsigo.DELETE(relativePath string, controller ctrFunc)
 ```
 
 ##### PATCH
 
 ```go
-gsigo.PATCH(relativePath string, controller ControllerInterface)
+gsigo.PATCH(relativePath string, controller ctrFunc)
 ```
 ##### PUT
 
 ```go
-gsigo.PUT(relativePath string, controller ControllerInterface)
+gsigo.PUT(relativePath string, controller ctrFunc)
 ```
 
 ##### OPTIONS
 
 ```go
-gsigo.OPTIONS(relativePath string, controller ControllerInterface)
+gsigo.OPTIONS(relativePath string, controller ctrFunc)
 ```
 
 ##### HEAD
 
 ```go
-gsigo.HEAD(relativePath string, controller ControllerInterface)
+gsigo.HEAD(relativePath string, controller ctrFunc)
 ```
 
 ##### Any
@@ -533,10 +537,14 @@ gsigo.HEAD(relativePath string, controller ControllerInterface)
 `GET, POST, PUT, PATCH, HEAD, OPTIONS, DELETE, CONNECT, TRACE`
 
 ```go
-gsigo.Any(relativePath string, controller ControllerInterface)
+gsigo.Any(relativePath string, controller ctrFunc)
 ```
 
 ### SOCKETIO路由规则
+
+```go
+type evtFunc func() EventInterface
+```
 
 ###### 示例
 
@@ -552,11 +560,11 @@ import (
 func init()  {
 	rootRouter := gsigo.Nsp("/")
 	{
-		rootRouter.OnConnect(&root.ConnectEvent{})
-		rootRouter.OnDisconnect(&root.DisconnectEvent{})
-		rootRouter.OnError(&root.ErrorEvent{})
-		rootRouter.OnEvent("notice", &root.NoticeEvent{})
-		rootRouter.OnEvent("bye", &root.ByeEvent{})
+		rootRouter.OnConnect( func() gsigo.EventInterface { return &root.ConnectEvent{}})
+		rootRouter.OnDisconnect( func() gsigo.EventInterface { return &root.DisconnectEvent{}})
+		rootRouter.OnError( func() gsigo.EventInterface { return &root.ErrorEvent{}})
+		rootRouter.OnEvent("notice",  func() gsigo.EventInterface { return &root.NoticeEvent{}})
+		rootRouter.OnEvent("bye",  func() gsigo.EventInterface { return &root.ByeEvent{}})
 	}
 
 	chatRouter := gsigo.Nsp("/chat")
@@ -571,35 +579,39 @@ func init()  {
 ##### Nsp 命名空间相当于WEB组
 
 ```go
-gsigo.Nsp(nsp string, event ...EventInterface) *router
+gsigo.Nsp(nsp string, event ...evtFunc) *router
 ```
 
 ##### OnConnect
 
 ```go
-gsigo.OnConnect(event EventInterface)
+gsigo.OnConnect(event evtFunc)
 ```
 
 ##### OnEvent
 
 ```go
-gsigo.OnEvent(eventName string, event EventInterface)
+gsigo.OnEvent(eventName string, event evtFunc)
 ```
 
 
 ##### OnError
 
 ```go
-gsigo.OnError(event EventInterface)
+gsigo.OnError(event evtFunc)
 ```
 
 ##### OnDisconnect
 
 ```go
-gsigo.OnDisconnect(event EventInterface)
+gsigo.OnDisconnect(event evtFunc)
 ```
 
 ### CMD路由规则
+
+```go
+type cmdFunc func() CmdInterface
+```
 
 ##### 示例
 
@@ -613,7 +625,7 @@ import (
 )
 
 func init()  {
-	gsigo.Cmd("test", &cmd.TestCmdController{})
+	gsigo.Cmd("test",func() gsigo.CmdInterface { return  &cmd.TestCmdController{}})
 }
 
 ```
@@ -885,6 +897,10 @@ go run cmd.go  -request_uri=requestUri
 
 [MODEL详细文档](https://gorm.io/docs/models.html)
 
+```go
+type gormFunc func(db *gorm.DB) *gorm.DB
+```
+
 ###### 使用
 
 ```go
@@ -999,13 +1015,13 @@ func CreateAnimals(db *DB) error {
 ##### 方法
 
 ```go
-func (d *DB) Create(value interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) (*gorm.DB, error) 
+func (d *DB) Create(value interface{}, funcs ...gormFunc ) (*gorm.DB, error) 
 ```
 
 ##### 别名
 
 ```go
-func (d *DB) Insert(value interface{}, funcs ...func(db *gorm.DB) *gorm.DB )  (*gorm.DB, error) 
+func (d *DB) Insert(value interface{}, funcs ...gormFunc )  (*gorm.DB, error) 
 ```
 
 [error 参见文档](https://github.com/go-playground/validator)
@@ -1035,7 +1051,7 @@ db.Create(&user)
 ##### 方法
 
 ```go
-func (d *DB) Delete(value interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB
+func (d *DB) Delete(value interface{}, funcs ...gormFunc ) *gorm.DB
 ```
 
 ##### 示例
@@ -1056,7 +1072,7 @@ db.Delete(&email)
 //// DELETE from emails where id=10;
 
 // Add extra SQL option for deleting SQL
-db.Delete(&email,func(db *gorm.DB) *gorm.DB {
+db.Delete(&email,gormFunc {
     db.Set("gorm:delete_option", "OPTION (OPTIMIZE FOR UNKNOWN)")
 })
 //// DELETE from emails where id=10 OPTION (OPTIMIZE FOR UNKNOWN);
@@ -1071,25 +1087,25 @@ db.Delete(&email,func(db *gorm.DB) *gorm.DB {
 ##### 改变单个字段
 
 ```go
-func (d *DB) Update(model interface{}, attrs []interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
+func (d *DB) Update(model interface{}, attrs []interface{}, funcs ...gormFunc ) *gorm.DB 
 ```
 
 ##### 修改多个字段
 
 ```go
-func (d *DB) Updates(model interface{}, values interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
+func (d *DB) Updates(model interface{}, values interface{}, funcs ...gormFunc ) *gorm.DB 
 ```
 
 ##### 修改列数据
 
 ```go
-func (d *DB) UpdateColumn(model interface{}, attrs []interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
+func (d *DB) UpdateColumn(model interface{}, attrs []interface{}, funcs ...gormFunc ) *gorm.DB 
 ```
 
 ##### 修改多列数据
 
 ```go
-func (d *DB) UpdateColumns(model interface{}, values interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB```
+func (d *DB) UpdateColumns(model interface{}, values interface{}, funcs ...gormFunc ) *gorm.DB```
 
 ##### 示例
 
@@ -1102,32 +1118,32 @@ type User struct {
 
 db := gsigo.GOrm.Using("user")
 // Update single attribute if it is changed
-db.Update([]string{"name", "hello"}, func(db *gorm.DB) *gorm.DB {
+db.Update([]string{"name", "hello"}, gormFunc {
 	db.Model(&user)
 })
 //// UPDATE users SET name='hello', updated_at='2013-11-17 21:34:10' WHERE id=111;
 
 // Update single attribute with combined conditions
-db.Update([]string{"name", "hello"}, func(db *gorm.DB) *gorm.DB {
+db.Update([]string{"name", "hello"}, gormFunc {
 	db.Model(&user).Where("active = ?", true)
 })
 //// UPDATE users SET name='hello', updated_at='2013-11-17 21:34:10' WHERE id=111 AND active=true;
 
 // Update multiple attributes with `map`, will only update those changed fields
-db.Update(map[string]interface{}{"name": "hello", "age": 18, "actived": false}, func(db *gorm.DB) *gorm.DB {
+db.Update(map[string]interface{}{"name": "hello", "age": 18, "actived": false}, gormFunc {
 	db.Model(&user)
 })
 //// UPDATE users SET name='hello', age=18, actived=false, updated_at='2013-11-17 21:34:10' WHERE id=111;
 
 // Update multiple attributes with `struct`, will only update those changed & non blank fields
-db.Update(User{Name: "hello", Age: 18}, func(db *gorm.DB) *gorm.DB {
+db.Update(User{Name: "hello", Age: 18}, gormFunc {
 	db.Model(&user)
 })
 //// UPDATE users SET name='hello', age=18, updated_at = '2013-11-17 21:34:10' WHERE id = 111;
 
 // WARNING when update with struct, GORM will only update those fields that with non blank value
 // For below Update, nothing will be updated as "", 0, false are blank values of their types
-db.Update(User{Name: "", Age: 0, Actived: false}, func(db *gorm.DB) *gorm.DB {
+db.Update(User{Name: "", Age: 0, Actived: false}, gormFunc {
 	db.Model(&user)
 })
 ```
@@ -1138,43 +1154,43 @@ db.Update(User{Name: "", Age: 0, Actived: false}, func(db *gorm.DB) *gorm.DB {
 
 ##### 查询第一条数据，按主键正序排序
 ```go
-func (d *DB) First(out interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
+func (d *DB) First(out interface{}, funcs ...gormFunc ) *gorm.DB 
 ```
 
 ##### 获取一条记录，没有指定的顺序
 
 ```go
-func (d *DB) Take(out interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
+func (d *DB) Take(out interface{}, funcs ...gormFunc ) *gorm.DB 
 ```
 
 ##### 获取最后一条数据，按照主键倒叙排序
 ```go
-func (d *DB) Last(out interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
+func (d *DB) Last(out interface{}, funcs ...gormFunc ) *gorm.DB 
 ```
 
 ##### 获取多条数据
 ```go
-func (d *DB) Find(out interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
+func (d *DB) Find(out interface{}, funcs ...gormFunc ) *gorm.DB 
 ```
 
 ##### 获取第一个匹配的记录，或者在给定条件下初始化一个新记录(只适用于结构，映射条件)
 ```go
-func (d *DB) FirstOrInit(out interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
+func (d *DB) FirstOrInit(out interface{}, funcs ...gormFunc ) *gorm.DB 
 ```
 
 ##### 获取第一个匹配的记录，或者在给定的条件下创建一个新的记录(只适用于struct, map条件)
 ```go
-func (d *DB) FirstOrCreate(out interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
+func (d *DB) FirstOrCreate(out interface{}, funcs ...gormFunc ) *gorm.DB 
 ```
 
 ##### 获取一个模型有多少条记录
 ```go
-func (d *DB) Count(value interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
+func (d *DB) Count(model interface{}, value interface{}, funcs ...gormFunc ) *gorm.DB
 ```
 
 ##### 从模型中查询单个列作为映射，如果您想要查询多个列，则应该使用Scan
 ```go
-func (d *DB) Pluck(column string, value interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB 
+func (d *DB) Pluck(model interface{}, column string, value interface{}, funcs ...gormFunc ) *gorm.DB 
 ```
 
 ##### 示例
@@ -1191,49 +1207,49 @@ user := User{Name: "Jinzhu", Age: 18, Birthday: time.Now()}
 db := gsigo.GOrm.Using("user")
 
 // Get first matched record
-db.First(&user, func(db *gorm.DB) *gorm.DB {
+db.First(&user, gormFunc {
     db.Where("name = ?", "jinzhu")
 })
 //// SELECT * FROM users WHERE name = 'jinzhu' limit 1;
 
 // Get all matched records
-db.Find(&users, func(db *gorm.DB) *gorm.DB {
+db.Find(&users, gormFunc {
    db.Where("name = ?", "jinzhu")
 })
 //// SELECT * FROM users WHERE name = 'jinzhu';
 
 // <>
-db.Find(&users, func(db *gorm.DB) *gorm.DB {
+db.Find(&users, gormFunc {
   db.Where("name <> ?", "jinzhu")
 })
 //// SELECT * FROM users WHERE name <> 'jinzhu';
 
 // IN
-db.Find(&users, func(db *gorm.DB) *gorm.DB {
+db.Find(&users, gormFunc {
   db.Where("name IN (?)", []string{"jinzhu", "jinzhu 2"})
 })
 //// SELECT * FROM users WHERE name in ('jinzhu','jinzhu 2');
 
 // LIKE
-db.Find(&users, func(db *gorm.DB) *gorm.DB {
+db.Find(&users, gormFunc {
   db.Where("name LIKE ?", "%jin%")
 })
 //// SELECT * FROM users WHERE name LIKE '%jin%';
 
 // AND
-db.Find(&users, func(db *gorm.DB) *gorm.DB {
+db.Find(&users, gormFunc {
    db.Where("name = ? AND age >= ?", "jinzhu", "22")
 })
 //// SELECT * FROM users WHERE name = 'jinzhu' AND age >= 22;
 
 // Time
-db.Find(&users, func(db *gorm.DB) *gorm.DB {
+db.Find(&users, gormFunc {
   db.Where("updated_at > ?", lastWeek)
 })
 //// SELECT * FROM users WHERE updated_at > '2000-01-01 00:00:00';
 
 // BETWEEN
-db.Find(&users, func(db *gorm.DB) *gorm.DB {
+db.Find(&users, gormFunc {
  db.Where("created_at BETWEEN ? AND ?", lastWeek, today)
 })
 //// SELECT * FROM users WHERE created_at BETWEEN '2000-01-01 00:00:00' AND '2000-01-08 00:00:00';
@@ -1246,17 +1262,17 @@ db.Find(&users, func(db *gorm.DB) *gorm.DB {
 ##### 将结果扫描到另一个结构中。
 
 ```go
-func (d *DB) Scan(dest interface{}, funcs ...func(db *gorm.DB) *gorm.DB ) *gorm.DB
+func (d *DB) Scan(dest interface{}, funcs ...gormFunc ) *gorm.DB
 ```
 
 ##### 运行原始SQL,单条查询，它不能与其他方法链接
 ```go
-func (d *DB) Row(funcs ...func(db *gorm.DB) *gorm.DB ) *sql.Row
+func (d *DB) Row(funcs ...gormFunc ) *sql.Row
 ```
 
 ##### 运行原始SQL,多条查询，它不能与其他方法链接
 ```go
-func (d *DB) Rows(funcs ...func(db *gorm.DB) *gorm.DB ) (*sql.Rows, error)
+func (d *DB) Rows(funcs ...gormFunc ) (*sql.Rows, error)
 ```
 
 ##### 运行原始SQL,将结果扫描到另一个结构中。

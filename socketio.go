@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+type evtFunc func() EventInterface
+
 //实例化一个socketio服务
 func newGsocketio() *gsocketio {
 	Gsocketio = &gsocketio{
@@ -121,7 +123,8 @@ func (s *gsocketio) groupHandle(eventType string, nsp string, conn socketio.Conn
 
 //onConnect add connect event
 //event 事件控制器
-func (s *gsocketio) onConnect(event EventInterface){
+func (s *gsocketio) onConnect(event evtFunc){
+	e := event()
 	s.Server.OnConnect(s.nsp, func(conn socketio.Conn)  error {
 		s.lock.Lock()//获取写锁
 		//添加连接
@@ -130,25 +133,26 @@ func (s *gsocketio) onConnect(event EventInterface){
 		}
 		s.lock.Unlock()//写锁解锁
 		s.groupHandle("connect", s.nsp, conn, "", nil)
-		s.funcHandle("connect", event, conn, "", nil)
-		return event.GetError()
+		s.funcHandle("connect", e, conn, "", nil)
+		return e.GetError()
 	})
 }
 
 //onEvent add evnet event
 //eventName socketio事件名称
 //event 事件控制器
-func (s *gsocketio) onEvent(eventName string, event EventInterface){
+func (s *gsocketio) onEvent(eventName string, event evtFunc){
+	e := event()
 	var f interface{}
-	if event.IsAck() == false {
+	if e.IsAck() == false {
 		f = func(conn socketio.Conn, message string) {
 			s.groupHandle("event", s.nsp, conn, message, nil)
-			s.funcHandle("event", event, conn, message, nil)
+			s.funcHandle("event", e, conn, message, nil)
 		}
 	} else {
 		f = func(conn socketio.Conn, message string) string {
 			s.groupHandle("event", s.nsp, conn, message, nil)
-			return s.funcHandle("event", event, conn, message, nil)
+			return s.funcHandle("event", e, conn, message, nil)
 		}
 	}
 	s.Server.OnEvent(s.nsp, eventName, f)
@@ -156,16 +160,18 @@ func (s *gsocketio) onEvent(eventName string, event EventInterface){
 
 //onError 添加一个错误事件路由
 //event 事件控制器
-func (s *gsocketio) onError(event EventInterface){
+func (s *gsocketio) onError(event evtFunc){
+	e := event()
 	s.Server.OnError(s.nsp, func(err error) {
 		s.groupHandle("error", s.nsp, nil, "", err)
-		s.funcHandle("error", event, nil, "", err)
+		s.funcHandle("error", e, nil, "", err)
 	})
 }
 
 //onDisconnect 添加一个关闭事件路由
 //event 事件控制器
-func (s *gsocketio) onDisconnect(event EventInterface){
+func (s *gsocketio) onDisconnect(event evtFunc){
+	e := event()
 	s.Server.OnDisconnect(s.nsp, func(conn socketio.Conn, message string) {
 		s.lock.Lock()//获取写锁
 		cid := conn.ID()
@@ -187,6 +193,6 @@ func (s *gsocketio) onDisconnect(event EventInterface){
 		}
 		s.lock.Unlock()//写锁解锁
 		s.groupHandle("disconnect", s.nsp, conn, message, nil)
-		s.funcHandle("disconnect", event, conn, message, nil)
+		s.funcHandle("disconnect", e, conn, message, nil)
 	})
 }

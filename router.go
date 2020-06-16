@@ -11,13 +11,13 @@ type router struct {
 	//socketio 命名空间
 	nspRouters map[string]EventInterface
 	//gin 组路由规则
-	groupRouters map[string]ControllerInterface
+	groupRouters map[string]ctrFunc
 	//socketio 路由
-	socketioRouters map[string]map[string]map[string]EventInterface
+	socketioRouters map[string]map[string]map[string]evtFunc
 	// gin 路由
 	ginRouters map[string][]gginRouter
 	//cmd 路由
-	cmdRouters map[string]CmdInterface
+	cmdRouters map[string]cmdFunc
 }
 
 //添加cmd路由信息
@@ -25,7 +25,7 @@ type router struct {
 //gsigo.Cmd("test", &TestCmd{})
 //go run main.go -request_uri='test'
 //cmd 命令行控制器
-func (r *router) Cmd(requestUri string, cmd CmdInterface) {
+func (r *router) Cmd(requestUri string, cmd cmdFunc) {
 	//命名空间不存在时初始化信息
 	r.cmdRouters[requestUri] = cmd
 }
@@ -35,16 +35,16 @@ func (r *router) Cmd(requestUri string, cmd CmdInterface) {
 //name 事件
 //event 事件控制器
 //eventName 事件名称
-func (r *router) event(name string, event EventInterface, eventName string) {
+func (r *router) event(name string, event evtFunc, eventName string) {
 	//命名空间不存在时初始化信息
 	_, ok := r.socketioRouters[routerObj.nsp]
 	if !ok {
-		r.socketioRouters[routerObj.nsp] = map[string]map[string]EventInterface{}
+		r.socketioRouters[routerObj.nsp] = map[string]map[string]evtFunc{}
 	}
 	//事件不存在时初始化信息
 	_, ok = r.socketioRouters[routerObj.nsp][name]
 	if !ok{
-		r.socketioRouters[routerObj.nsp][name] = map[string]EventInterface{}
+		r.socketioRouters[routerObj.nsp][name] = map[string]evtFunc{}
 	}
 	//添加事件
 	r.socketioRouters[routerObj.nsp][name][eventName] = event
@@ -52,26 +52,26 @@ func (r *router) event(name string, event EventInterface, eventName string) {
 
 //OnConnect 添加连接事件
 //event 事件控制器
-func (r *router) OnConnect(event EventInterface)  {
+func (r *router) OnConnect(event evtFunc)  {
 	r.event("onConnect", event, "_")
 }
 
 //OnEvent 添加socketio事件
 //eventName socketio事件名称
 //event 事件控制器
-func (r *router) OnEvent(eventName string, event EventInterface){
+func (r *router) OnEvent(eventName string, event evtFunc){
 	r.event("onEvent", event, eventName)
 }
 
 //OnError 添加错误事件
 //event 事件控制器
-func (r *router) OnError(event EventInterface){
+func (r *router) OnError(event evtFunc){
 	r.event("onError", event, "_")
 }
 
 //OnDisconnect 添加关闭连接事件
 //event 事件控制器
-func (r *router) OnDisconnect(event EventInterface){
+func (r *router) OnDisconnect(event evtFunc){
 	r.event("onDisconnect", event, "_")
 }
 
@@ -84,13 +84,13 @@ type gginRouter struct {
 	//文件路径
 	filePath string
 	//控制器
-	controller ControllerInterface
+	controller ctrFunc
 }
 
 //请求用给定的路径和方法注册一个新的请求句柄和中间件。
 //最后一个处理程序应该是真正的处理程序，其他的应该是可以而且应该在不同的路由之间共享的中间件。
 // 事件： GET, POST, PUT, PATCH, HEAD, OPTIONS, DELETE, Any requests the respective shortcut
-func (r *router) Request(method string, relativePath string, controller ControllerInterface, filePaths ...string) {
+func (r *router) Request(method string, relativePath string, controller ctrFunc, filePaths ...string) {
 	//初始化gin组路由
 	_, ok := r.ginRouters[r.groupRelativePath]
 	if !ok {
@@ -112,56 +112,57 @@ func (r *router) Request(method string, relativePath string, controller Controll
 
 // Use 在组中添加一个中间件
 //middleware 中间件控制器
-func (r *router) Use(middleware ControllerInterface) {
+func (r *router) Use(middleware ctrFunc) {
 	r.Request("USE", "",  middleware)
 }
 
 // POST 添加 POST 路由信息
 //relativePath 网站的相对路径
 //c 中间件控制器
-func (r *router) POST(relativePath string, controller ControllerInterface) {
+func (r *router) POST(relativePath string, controller ctrFunc) {
 	r.Request("POST", relativePath, controller)
 }
 
 // GET 添加 GET 路由信息
 //relativePath 网站的相对路径
 //c 中间件控制器
-func (r *router) GET(relativePath string, controller ControllerInterface) {
+func (r *router) GET(relativePath string, controller ctrFunc) {
+	//controller ControllerInterface
 	r.Request("GET", relativePath, controller)
 }
 
 // DELETE 添加 DELETE 路由信息
 //relativePath 网站的相对路径
 //c 中间件控制器
-func (r *router) DELETE(relativePath string, controller ControllerInterface) {
+func (r *router) DELETE(relativePath string, controller ctrFunc) {
 	r.Request("DELETE", relativePath, controller)
 }
 
 // PATCH 添加 PATCH 路由信息
 //relativePath 网站的相对路径
 //c 中间件控制器
-func (r *router) PATCH(relativePath string, controller ControllerInterface) {
+func (r *router) PATCH(relativePath string, controller ctrFunc) {
 	r.Request("PATCH", relativePath, controller)
 }
 
 // PUT 添加 PUT 路由信息
 //relativePath 网站的相对路径
 //c 中间件控制器
-func (r *router) PUT(relativePath string, controller ControllerInterface) {
+func (r *router) PUT(relativePath string, controller ctrFunc) {
 	r.Request("PUT", relativePath, controller)
 }
 
 // OPTIONS 添加 OPTIONS 路由信息
 //relativePath 网站的相对路径
 //c 中间件控制器
-func (r *router) OPTIONS(relativePath string, controller ControllerInterface) {
+func (r *router) OPTIONS(relativePath string, controller ctrFunc) {
 	r.Request("OPTIONS", relativePath, controller)
 }
 
 // HEAD 添加 HEAD 路由信息
 //relativePath 网站的相对路径
 //c 中间件控制器
-func (r *router) HEAD(relativePath string, controller ControllerInterface) {
+func (r *router) HEAD(relativePath string, controller ctrFunc) {
 	r.Request("HEAD", relativePath, controller)
 }
 
@@ -169,7 +170,7 @@ func (r *router) HEAD(relativePath string, controller ControllerInterface) {
 // GET, POST, PUT, PATCH, HEAD, OPTIONS, DELETE, CONNECT, TRACE.
 //relativePath 网站的相对路径
 //c 控制器方法
-func (r *router) Any(relativePath string, controller ControllerInterface) {
+func (r *router) Any(relativePath string, controller ctrFunc) {
 	r.Request("ANY", relativePath, controller)
 }
 
@@ -187,8 +188,8 @@ func init()  {
 		nsp: "/",
 		nspRouters: nil,
 		groupRouters: nil,
-		socketioRouters: map[string]map[string]map[string]EventInterface{},
+		socketioRouters: map[string]map[string]map[string]evtFunc{},
 		ginRouters: map[string][]gginRouter{},
-		cmdRouters: map[string]CmdInterface{},
+		cmdRouters: map[string]cmdFunc{},
 	}
 }

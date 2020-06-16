@@ -3,6 +3,8 @@ package gsigo
 import (
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"reflect"
+	"strings"
 )
 
 // Controller 定义了一些基本的http请求处理程序操作，例如
@@ -10,6 +12,8 @@ import (
 type Controller struct {
 	//gin Context
 	Ctx  *gin.Context
+	//Controller
+	ctr ControllerInterface
 	//控制器名称
 	controllerName string
 	//操作名称
@@ -20,7 +24,7 @@ type Controller struct {
 
 // ControllerInterface是一个统一所有控制器处理程序的接口。
 type ControllerInterface interface {
-	Init(ct *gin.Context, controllerName, actionName string)
+	Init(ctx *gin.Context, c ControllerInterface, actionName string)
 	Prepare()
 	Get()
 	Post()
@@ -36,8 +40,8 @@ type ControllerInterface interface {
 }
 
 //Init 初始化控制器操作的默认值。
-func (c *Controller) Init(ctx *gin.Context, controllerName, actionName string) {
-	c.controllerName = controllerName
+func (c *Controller) Init(ctx *gin.Context, ctr ControllerInterface, actionName string) {
+	c.ctr = ctr
 	c.actionName = actionName
 	c.Ctx = ctx
 }
@@ -99,6 +103,11 @@ func (c *Controller) GetGroup() string {
 
 //GetController 获取执行的控制器名称。
 func (c *Controller) GetController() string {
+	if c.controllerName == "" {
+		reflectVal := reflect.ValueOf(c.ctr)
+		ct := reflect.Indirect(reflectVal).Type()
+		c.controllerName = strings.TrimSuffix(ct.Name(), "Controller")
+	}
 	return c.controllerName
 }
 

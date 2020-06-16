@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	socketio "github.com/googollee/go-socket.io"
+	"github.com/whf-sky/gsigo/grace"
 	"net/http"
 	"os"
-	"reflect"
 	"strings"
 )
 
@@ -15,6 +15,8 @@ func newGgin() *ggin {
 	Ggin = &ggin{}
 	return Ggin.server()
 }
+
+type ctrFunc func() ControllerInterface
 
 //gin
 type ggin struct {
@@ -53,9 +55,10 @@ func (g *ggin) run() *ggin {
 	}
 	address := g.resolveAddress(addr)
 	g.debugPrint("Listening and serving HTTP on "+address)
-	err := http.ListenAndServe(address, g.Engine)
-	if err != nil {
-		Log.Error(err)
+	//err := http.ListenAndServe(address, g.Engine)
+	server := grace.NewServer(address, g.Engine)
+	if err := server.ListenAndServe(); err != nil {
+		Log.Error("ListenAndServe: ", err, fmt.Sprintf("%d", os.Getpid()))
 	}
 	return g
 }
@@ -129,17 +132,11 @@ func (g *ggin) registerRouter() {
 	}
 }
 
-//getController 获取控制器名称
-func (g *ggin) getController(c ControllerInterface) string {
-	reflectVal := reflect.ValueOf(c)
-	ct := reflect.Indirect(reflectVal).Type()
-	controllerName := strings.TrimSuffix(ct.Name(), "Controller")
-	return controllerName
-}
 
 //handle is handle for action
-func (g *ggin) handle(c ControllerInterface, ctx *gin.Context, actionName string) {
-	c.Init(ctx, g.getController(c), actionName)
+func (g *ggin) handle(ctr ctrFunc, ctx *gin.Context, actionName string) {
+	c := ctr()
+	c.Init(ctx, c, actionName)
 	c.Prepare()
 	g.execute(c, actionName)
 	c.Finish()
@@ -170,7 +167,7 @@ func (g *ggin) execute(c ControllerInterface, actionName string){
 //例如，所有使用公共中间件进行授权的路由都可以分组。
 //relativePath 网站的相对路径
 //c 组控制器
-func (g *ggin) group(relativePath string, c ControllerInterface) *gin.RouterGroup {
+func (g *ggin) group(relativePath string, c ctrFunc) *gin.RouterGroup {
 	if c == nil {
 		return g.Engine.Group(relativePath)
 	}
@@ -181,7 +178,7 @@ func (g *ggin) group(relativePath string, c ControllerInterface) *gin.RouterGrou
 
 // Use 在组中添加一个中间件
 //middleware 中间件控制器
-func (g *ggin) use(middleware ControllerInterface) *ggin {
+func (g *ggin) use(middleware ctrFunc) *ggin {
 	g.Engine.Use(func(context *gin.Context) {
 		g.handle(middleware, context, "Use")
 	})
@@ -191,7 +188,7 @@ func (g *ggin) use(middleware ControllerInterface) *ggin {
 // POST 添加 POST 路由信息
 //relativePath 网站的相对路径
 //c 中间件控制器
-func (g *ggin) post(relativePath string, c ControllerInterface) *ggin {
+func (g *ggin) post(relativePath string, c ctrFunc) *ggin {
 	g.RouterGroup.POST(relativePath, func(context *gin.Context) {
 		g.handle(c, context, "Post")
 	})
@@ -201,7 +198,7 @@ func (g *ggin) post(relativePath string, c ControllerInterface) *ggin {
 // GET 添加 GET 路由信息
 //relativePath 网站的相对路径
 //c 中间件控制器
-func (g *ggin) get(relativePath string, c ControllerInterface) *ggin {
+func (g *ggin) get(relativePath string, c ctrFunc) *ggin {
 	g.RouterGroup.GET(relativePath, func(context *gin.Context) {
 		g.handle(c, context, "Get")
 	})
@@ -211,7 +208,7 @@ func (g *ggin) get(relativePath string, c ControllerInterface) *ggin {
 // DELETE 添加 DELETE 路由信息
 //relativePath 网站的相对路径
 //c 中间件控制器
-func (g *ggin) delete(relativePath string, c ControllerInterface) *ggin {
+func (g *ggin) delete(relativePath string, c ctrFunc) *ggin {
 	g.RouterGroup.DELETE(relativePath, func(context *gin.Context) {
 		g.handle(c, context, "Delete")
 	})
@@ -221,7 +218,7 @@ func (g *ggin) delete(relativePath string, c ControllerInterface) *ggin {
 // PATCH 添加 PATCH 路由信息
 //relativePath 网站的相对路径
 //c 中间件控制器
-func (g *ggin) patch(relativePath string, c ControllerInterface) *ggin {
+func (g *ggin) patch(relativePath string, c ctrFunc) *ggin {
 	g.RouterGroup.PATCH(relativePath, func(context *gin.Context) {
 		g.handle(c, context, "Patch")
 	})
@@ -231,7 +228,7 @@ func (g *ggin) patch(relativePath string, c ControllerInterface) *ggin {
 // PUT 添加 PUT 路由信息
 //relativePath 网站的相对路径
 //c 中间件控制器
-func (g *ggin) put(relativePath string, c ControllerInterface) *ggin {
+func (g *ggin) put(relativePath string, c ctrFunc) *ggin {
 	g.RouterGroup.PUT(relativePath, func(context *gin.Context) {
 		g.handle(c, context, "Put")
 	})
@@ -241,7 +238,7 @@ func (g *ggin) put(relativePath string, c ControllerInterface) *ggin {
 // OPTIONS 添加 OPTIONS 路由信息
 //relativePath 网站的相对路径
 //c 中间件控制器
-func (g *ggin) options(relativePath string, c ControllerInterface) *ggin {
+func (g *ggin) options(relativePath string, c ctrFunc) *ggin {
 	g.RouterGroup.OPTIONS(relativePath, func(context *gin.Context) {
 		g.handle(c, context, "Options")
 	})
@@ -251,7 +248,7 @@ func (g *ggin) options(relativePath string, c ControllerInterface) *ggin {
 // HEAD 添加 HEAD 路由信息
 //relativePath 网站的相对路径
 //c 中间件控制器
-func (g *ggin) head(relativePath string, c ControllerInterface) *ggin {
+func (g *ggin) head(relativePath string, c ctrFunc) *ggin {
 	g.RouterGroup.HEAD(relativePath, func(context *gin.Context) {
 		g.handle(c, context, "Head")
 	})
@@ -262,7 +259,7 @@ func (g *ggin) head(relativePath string, c ControllerInterface) *ggin {
 // GET, POST, PUT, PATCH, HEAD, OPTIONS, DELETE, CONNECT, TRACE.
 //relativePath 网站的相对路径
 //c 控制器方法
-func (g *ggin) any(relativePath string, c ControllerInterface) *ggin {
+func (g *ggin) any(relativePath string, c ctrFunc) *ggin {
 	g.RouterGroup.Any(relativePath, func(context *gin.Context) {
 		g.handle(c, context, "Any")
 	})

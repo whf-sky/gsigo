@@ -6,6 +6,6 @@ package gsigo
 //gsigo.Cmd("test", &TestCmd{})
 //go run main.go -request_uri='test'
 //cmd 命令行控制器
-func Cmd(requestUri string, cmd CmdInterface) {
+func Cmd(requestUri string, cmd cmdFunc) {
 	routerObj.Cmd(requestUri, cmd)
 }

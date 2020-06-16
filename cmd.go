@@ -12,15 +12,17 @@ func newCmd() *cmd {
 	return Gcmd
 }
 
+type cmdFunc func() CmdInterface
+
 type cmd struct {}
 
 func (c *cmd) run() *cmd {
 	var request_uri string
 	flag.StringVar(&request_uri, "request_uri", "","Please input request_uri")
 	flag.Parse()
-
 	request_uri = strings.TrimSpace(request_uri)
-	if cmd ,ok := routerObj.cmdRouters[request_uri]; ok {
+	if cFunc ,ok := routerObj.cmdRouters[request_uri]; ok {
+		cmd := cFunc()
 		cmd.Init()
 		cmd.Prepare()
 		cmd.Execute()
